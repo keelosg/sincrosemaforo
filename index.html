@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SincroSemáforo</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: #121212; color: #fff; margin: 0; padding: 20px; text-align: center; }
+        .card { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+        label { font-size: 0.8em; color: #aaa; }
+        input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #333; background: #2a2a2a; color: #fff; font-size: 1em; }
+        button { width: 100%; padding: 15px; border-radius: 10px; border: none; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-sync { background: #00e676; color: #000; }
+
+        .light-display { height: 200px; border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: background 0.3s; margin-top: 20px; border: 4px solid #333; }
+        .state-text { font-size: 1.8em; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .timer-text { font-size: 3.5em; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+        /* Colores de las fases */
+        .bg-rojo { background: #d32f2f; color: white; }
+        .bg-amarillo { background: #fbc02d; color: black; }
+        .bg-verde { background: #388e3c; color: white; }
+        .bg-flecha { background: #00897b; color: white; }
+        .bg-off { background: #222; color: #666; }
+
+        /* Orden de fases */
+        .order-list { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+        .order-row { display: flex; align-items: center; gap: 8px; background: #2a2a2a; border-radius: 8px; padding: 8px 10px; }
+        .order-row .pos { width: 22px; font-weight: bold; color: #aaa; }
+        .order-row .name { flex: 1; text-align: left; font-weight: 600; }
+        .order-row .arrows { display: flex; gap: 4px; }
+        .order-row .arrows button { width: 36px; padding: 6px 0; margin: 0; font-size: 1em; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+
+        /* Próximas señales */
+        .upcoming { display: flex; gap: 10px; margin-top: 12px; }
+        .upcoming-item { flex: 1; background: #1e1e1e; border-radius: 10px; padding: 10px; }
+        .upcoming-item .u-label { font-size: 0.75em; color: #888; }
+        .upcoming-item .u-name { font-weight: bold; margin-top: 4px; }
+        .upcoming-item .u-dur { font-size: 0.85em; color: #aaa; margin-top: 2px; }
+
+        /* Temporizador lineal */
+        .linear-wrap { position: relative; margin-top: 30px; }
+        .linear-bar { position: relative; height: 36px; border-radius: 8px; overflow: hidden; background: #333; }
+        .segment { position: absolute; top: 0; bottom: 0; }
+        .safe-bar { position: relative; height: 14px; border-radius: 6px; overflow: hidden; background: #333; margin-top: 6px; }
+        .depart-zone { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, #ffd54f, #ffd54f 4px, #ffb300 4px, #ffb300 8px); }
+        .playhead { position: absolute; top: -4px; bottom: -4px; width: 4px; background: #fff; border-radius: 2px; box-shadow: 0 0 6px 2px rgba(255,255,255,0.9); transition: left 0.2s linear; z-index: 2; }
+        .bar-caption { font-size: 0.7em; color: #888; margin-top: 4px; text-align: left; }
+        .window-status { margin-top: 14px; font-size: 0.95em; font-weight: bold; padding: 12px; border-radius: 8px; text-align: center; }
+        .window-ok { background: rgba(0,230,118,0.15); color: #00e676; }
+        .window-warn { background: rgba(255,82,82,0.15); color: #ff5252; }
+
+        /* Configuraciones guardadas */
+        .config-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+        .config-row { display: flex; align-items: center; gap: 8px; background: #2a2a2a; border-radius: 8px; padding: 8px 10px; border: 2px solid transparent; }
+        .config-row.active { border-color: #00e676; }
+        .config-row .c-name { flex: 1; text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .config-row .c-btns { display: flex; gap: 6px; }
+        .config-row .c-btns button { width: auto; padding: 6px 10px; margin: 0; font-size: 0.85em; }
+        .btn-load { background: #2979ff; color: #fff; }
+        .btn-delete { background: #d32f2f; color: #fff; }
+        .btn-save-new { background: #00e676; color: #000; }
+        .btn-update { background: #fbc02d; color: #000; }
+        .config-empty { color: #888; font-size: 0.85em; text-align: left; }
+        .config-count { font-size: 0.75em; color: #888; margin-top: 6px; text-align: left; }
+
+        /* Modo simplificado (después de sincronizar) */
+        .hidden { display: none !important; }
+        .btn-edit { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: #333; color: #fff; margin: 10px 0 0 0; }
+
+        /* Toggles de sonido y vibración */
+        .toggle-row { display: flex; gap: 10px; margin-top: 12px; }
+        .toggle-btn { flex: 1; padding: 10px; font-size: 0.85em; background: #00e676; color: #000; margin: 0; }
+        .toggle-btn.off { background: #444; color: #999; }
+    </style>
+</head>
+<body>
+
+    <h2>SincroSemáforo Viaducto</h2>
+    <button id="btnEditar" class="btn-edit hidden" onclick="salirModoSimplificado()">⚙️ Ver configuración</button>
+
+    <div id="setupCards">
+    <div class="card">
+        <div class="grid">
+            <div><label>Verde (s)</label><input type="number" id="tVerde" value="30"></div>
+            <div><label>Amarillo (s)</label><input type="number" id="tAmarillo" value="3"></div>
+            <div><label>Rojo (s)</label><input type="number" id="tRojo" value="40"></div>
+            <div><label>Flecha (s)</label><input type="number" id="tFlecha" value="15"></div>
+        </div>
+        <button class="btn-sync" onclick="sincronizar()">¡SINCRONIZAR AHORA!</button>
+    </div>
+
+    <div class="card">
+        <label>Orden de las señales (usa las flechas para reordenar)</label>
+        <div class="order-list" id="orderList"></div>
+    </div>
+    </div>
+
+    <div id="lightBox" class="light-display bg-off">
+        <div id="stateText" class="state-text">SIN SINCRONIZAR</div>
+        <div id="timerText" class="timer-text">--</div>
+    </div>
+
+    <div id="upcomingBox" class="upcoming">
+        <div class="upcoming-item">
+            <div class="u-label">Siguiente</div>
+            <div class="u-name" id="nextName">--</div>
+            <div class="u-dur" id="nextDur">--</div>
+        </div>
+        <div class="upcoming-item">
+            <div class="u-label">Después</div>
+            <div class="u-name" id="afterName">--</div>
+            <div class="u-dur" id="afterDur">--</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div id="bajadaInputWrap">
+            <label>Tiempo de bajada (s) — desde tu posición hasta el semáforo</label>
+            <input type="number" id="tBajada" value="55" style="margin-top:6px;">
+        </div>
+        <div class="toggle-row">
+            <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
+            <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
+        </div>
+        <div class="linear-wrap">
+            <div class="linear-bar" id="linearBar"></div>
+            <div class="safe-bar" id="safeBar"></div>
+            <div class="bar-caption">Franja superior: estado del semáforo · Franja inferior (rayada): momento seguro para empezar a bajar</div>
+        </div>
+        <div class="window-status" id="windowStatus">--</div>
+    </div>
+
+    <div id="configCard" class="card">
+        <label>Configuraciones guardadas (máx. 5)</label>
+        <input type="text" id="nombreConfig" placeholder="Nombre de la configuración" style="margin-top:6px;">
+        <div class="grid" style="margin-top:8px;">
+            <button class="btn-save-new" onclick="guardarNuevaConfig()">💾 Guardar como nueva</button>
+            <button class="btn-update" onclick="actualizarConfigSeleccionada()">✏️ Actualizar seleccionada</button>
+        </div>
+        <div class="config-list" id="configList"></div>
+        <div class="config-count" id="configCount"></div>
+    </div>
+
+    <script>
+        let syncTime = localStorage.getItem('syncTime') ? parseInt(localStorage.getItem('syncTime')) : null;
+        let modoSimplificado = localStorage.getItem('modoSimplificado') === 'true';
+        let alertaDisparada = false; // evita repetir la alerta dentro de la misma ventana
+
+        // ===== Sonido y vibración =====
+        let sonidoActivado = localStorage.getItem('sonidoActivado') !== 'false';
+        let vibracionActivada = localStorage.getItem('vibracionActivada') !== 'false';
+        let audioCtx = null;
+
+        function obtenerAudioCtx() {
+            if (!audioCtx) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    audioCtx = null;
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function reproducirBeep(freq, duracionMs, volumen) {
+            const ctx = obtenerAudioCtx();
+            if (!ctx) return;
+            try {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.value = volumen;
+                osc.connect(gain).connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duracionMs / 1000);
+            } catch (e) {}
+        }
+
+        function dispararAlerta() {
+            // Vibración que se intensifica (pulsos más largos y pausas más cortas) y
+            // termina justo cuando comienza la ventana segura de bajada (~5000 ms en total)
+            if (vibracionActivada && navigator.vibrate) {
+                navigator.vibrate([100, 900, 250, 750, 400, 600, 550, 450, 700, 300]);
+            }
+            // Sonido que se intensifica en paralelo (más agudo y más largo hacia el final)
+            if (sonidoActivado) {
+                const beeps = [
+                    { delay: 0,    freq: 440, dur: 150,  vol: 0.15 },
+                    { delay: 1000, freq: 554, dur: 200,  vol: 0.20 },
+                    { delay: 2000, freq: 659, dur: 250,  vol: 0.25 },
+                    { delay: 3000, freq: 784, dur: 300,  vol: 0.30 },
+                    { delay: 4000, freq: 988, dur: 1000, vol: 0.35 }
+                ];
+                beeps.forEach(b => setTimeout(() => reproducirBeep(b.freq, b.dur, b.vol), b.delay));
+            }
+        }
+
+        function actualizarBotonesToggle() {
+            const btnSonido = document.getElementById('btnSonido');
+            const btnVibracion = document.getElementById('btnVibracion');
+            btnSonido.innerText = `🔊 Sonido: ${sonidoActivado ? 'ON' : 'OFF'}`;
+            btnSonido.classList.toggle('off', !sonidoActivado);
+            btnVibracion.innerText = `📳 Vibración: ${vibracionActivada ? 'ON' : 'OFF'}`;
+            btnVibracion.classList.toggle('off', !vibracionActivada);
+        }
+
+        function toggleSonido() {
+            sonidoActivado = !sonidoActivado;
+            localStorage.setItem('sonidoActivado', sonidoActivado);
+            obtenerAudioCtx(); // aprovechar el gesto del usuario para desbloquear el audio
+            actualizarBotonesToggle();
+        }
+
+        function toggleVibracion() {
+            vibracionActivada = !vibracionActivada;
+            localStorage.setItem('vibracionActivada', vibracionActivada);
+            actualizarBotonesToggle();
+        }
+
+        // Configuración de cada fase: etiqueta, clase CSS, id del input de duración y color del punto
+        const phasesConfig = {
+            verde:     { label: 'VERDE',           className: 'bg-verde',     inputId: 'tVerde',     dot: '#388e3c' },
+            amarillo:  { label: 'AMARILLO',        className: 'bg-amarillo',  inputId: 'tAmarillo',  dot: '#fbc02d' },
+            rojo:      { label: 'ROJO',            className: 'bg-rojo',      inputId: 'tRojo',      dot: '#d32f2f' },
+            flecha:    { label: 'FLECHA VERDE ➔',  className: 'bg-flecha',    inputId: 'tFlecha',    dot: '#00897b' }
+        };
+
+        // Orden por defecto (igual que el original: verde -> amarillo -> rojo -> flecha)
+        let order = JSON.parse(localStorage.getItem('phaseOrder') || 'null') || ['verde', 'amarillo', 'rojo', 'flecha'];
+
+        function guardarOrden() {
+            localStorage.setItem('phaseOrder', JSON.stringify(order));
+        }
+
+        function moverFase(index, direccion) {
+            const nuevoIndex = index + direccion;
+            if (nuevoIndex < 0 || nuevoIndex >= order.length) return;
+            [order[index], order[nuevoIndex]] = [order[nuevoIndex], order[index]];
+            guardarOrden();
+            renderOrderList();
+        }
+
+        function renderOrderList() {
+            const container = document.getElementById('orderList');
+            container.innerHTML = '';
+            order.forEach((key, index) => {
+                const cfg = phasesConfig[key];
+                const row = document.createElement('div');
+                row.className = 'order-row';
+                row.innerHTML = `
+                    <span class="pos">${index + 1}</span>
+                    <span class="dot" style="background:${cfg.dot}"></span>
+                    <span class="name">${cfg.label}</span>
+                    <div class="arrows">
+                        <button onclick="moverFase(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button onclick="moverFase(${index}, 1)" ${index === order.length - 1 ? 'disabled' : ''}>↓</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function sincronizar() {
+            syncTime = Date.now();
+            localStorage.setItem('syncTime', syncTime);
+            modoSimplificado = true;
+            localStorage.setItem('modoSimplificado', 'true');
+            obtenerAudioCtx(); // aprovechar este gesto del usuario para desbloquear el audio
+            actualizarVisibilidad();
+        }
+
+        function salirModoSimplificado() {
+            modoSimplificado = false;
+            localStorage.setItem('modoSimplificado', 'false');
+            actualizarVisibilidad();
+        }
+
+        function actualizarVisibilidad() {
+            document.getElementById('setupCards').classList.toggle('hidden', modoSimplificado);
+            document.getElementById('upcomingBox').classList.toggle('hidden', modoSimplificado);
+            document.getElementById('bajadaInputWrap').classList.toggle('hidden', modoSimplificado);
+            document.getElementById('configCard').classList.toggle('hidden', modoSimplificado);
+            document.getElementById('btnEditar').classList.toggle('hidden', !modoSimplificado);
+        }
+
+        function obtenerDuraciones() {
+            const duraciones = {};
+            for (const key in phasesConfig) {
+                duraciones[key] = (parseInt(document.getElementById(phasesConfig[key].inputId).value) || 0) * 1000;
+            }
+            return duraciones;
+        }
+
+        function formatearSegundos(ms) {
+            return Math.round(ms / 1000) + 's';
+        }
+
+        function actualizarSemaforo() {
+            const duraciones = obtenerDuraciones();
+            const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
+
+            const box = document.getElementById('lightBox');
+            const state = document.getElementById('stateText');
+            const timer = document.getElementById('timerText');
+
+            if (!syncTime || duracionCiclo === 0) return;
+
+            const tiempoTranscurrido = (Date.now() - syncTime) % duracionCiclo;
+            let acumulado = 0;
+            let faseActualIdx = -1;
+
+            for (let i = 0; i < order.length; i++) {
+                const key = order[i];
+                acumulado += duraciones[key];
+                if (tiempoTranscurrido < acumulado) {
+                    const restante = Math.ceil((acumulado - tiempoTranscurrido) / 1000);
+                    const cfg = phasesConfig[key];
+                    box.className = 'light-display ' + cfg.className;
+                    state.innerText = cfg.label;
+                    timer.innerText = restante + 's';
+                    faseActualIdx = i;
+                    break;
+                }
+            }
+
+            if (faseActualIdx === -1) return;
+
+            // Próximas dos fases (con wrap-around del ciclo)
+            const siguienteIdx = (faseActualIdx + 1) % order.length;
+            const despuesIdx = (faseActualIdx + 2) % order.length;
+
+            const siguienteKey = order[siguienteIdx];
+            const despuesKey = order[despuesIdx];
+
+            document.getElementById('nextName').innerText = phasesConfig[siguienteKey].label;
+            document.getElementById('nextDur').innerText = formatearSegundos(duraciones[siguienteKey]);
+
+            document.getElementById('afterName').innerText = phasesConfig[despuesKey].label;
+            document.getElementById('afterDur').innerText = formatearSegundos(duraciones[despuesKey]);
+
+            actualizarTemporizadorLineal(duraciones, duracionCiclo, tiempoTranscurrido);
+        }
+
+        function actualizarTemporizadorLineal(duraciones, duracionCiclo, tiempoTranscurrido) {
+            const bar = document.getElementById('linearBar');
+            const safeBar = document.getElementById('safeBar');
+            const status = document.getElementById('windowStatus');
+
+            const tiempoBajada = (parseInt(document.getElementById('tBajada').value) || 0) * 1000;
+
+            // 1. Dibujar los segmentos de color de la fase (estado del semáforo en cada instante)
+            let acumulado = 0;
+            let barHtml = '';
+            const intervalosFase = []; // {key, start, end}
+
+            order.forEach((key) => {
+                const dur = duraciones[key];
+                const start = acumulado;
+                const end = acumulado + dur;
+                const leftPct = (start / duracionCiclo) * 100;
+                const widthPct = (dur / duracionCiclo) * 100;
+                barHtml += `<div class="segment ${phasesConfig[key].className}" style="left:${leftPct}%; width:${widthPct}%;"></div>`;
+                intervalosFase.push({ key, start, end });
+                acumulado = end;
+            });
+
+            const playheadPct = (tiempoTranscurrido / duracionCiclo) * 100;
+            barHtml += `<div class="playhead" style="left:${playheadPct}%;"></div>`;
+            bar.innerHTML = barHtml;
+
+            // 2. Intervalos "seguros" de llegada = fases verde y flecha
+            const intervalosSeguros = intervalosFase.filter(f => f.key === 'verde' || f.key === 'flecha');
+
+            // 3. Convertir cada intervalo seguro de LLEGADA en una ventana de SALIDA (restando el tiempo de bajada)
+            function desplazar(start, end) {
+                let s = ((start - tiempoBajada) % duracionCiclo + duracionCiclo) % duracionCiclo;
+                let e = ((end - tiempoBajada) % duracionCiclo + duracionCiclo) % duracionCiclo;
+                if (s <= e) return [[s, e]];
+                // Si la resta cruza el inicio del ciclo, se parte en dos tramos
+                return [[s, duracionCiclo], [0, e]];
+            }
+
+            let ventanasSalida = [];
+            intervalosSeguros.forEach(({ start, end }) => {
+                ventanasSalida = ventanasSalida.concat(desplazar(start, end));
+            });
+
+            // 4. Dibujar las ventanas de salida en la franja inferior
+            let safeHtml = '';
+            ventanasSalida.forEach(([s, e]) => {
+                const leftPct = (s / duracionCiclo) * 100;
+                const widthPct = ((e - s) / duracionCiclo) * 100;
+                safeHtml += `<div class="depart-zone" style="left:${leftPct}%; width:${widthPct}%;"></div>`;
+            });
+            safeHtml += `<div class="playhead" style="left:${playheadPct}%;"></div>`;
+            safeBar.innerHTML = safeHtml;
+
+            // 5. ¿Es AHORA un buen momento para bajar?
+            const enVentana = ventanasSalida.find(([s, e]) => tiempoTranscurrido >= s && tiempoTranscurrido < e);
+
+            if (enVentana) {
+                const segundosRestantes = Math.ceil((enVentana[1] - tiempoTranscurrido) / 1000);
+                status.className = 'window-status window-ok';
+                status.innerText = `🟢 ¡BAJA AHORA! Tienes ${segundosRestantes}s más para salir y llegar con luz segura.`;
+                alertaDisparada = false; // dentro de la ventana: rearmar para la próxima vuelta del ciclo
+            } else {
+                // Buscar el inicio de la próxima ventana (la más cercana hacia adelante, con wrap-around)
+                let mejorEspera = null;
+                ventanasSalida.forEach(([s]) => {
+                    let espera = s - tiempoTranscurrido;
+                    if (espera < 0) espera += duracionCiclo;
+                    if (mejorEspera === null || espera < mejorEspera) mejorEspera = espera;
+                });
+                const segundosEspera = mejorEspera !== null ? Math.ceil(mejorEspera / 1000) : '--';
+                status.className = 'window-status window-warn';
+                status.innerText = `🔴 Todavía no bajes. Espera ${segundosEspera}s para salir y llegar con luz segura.`;
+
+                // Disparar la alerta (vibración + sonido, si están activados) 5s antes de la ventana
+                if (mejorEspera !== null && mejorEspera <= 5000 && !alertaDisparada) {
+                    alertaDisparada = true;
+                    dispararAlerta();
+                }
+            }
+        }
+
+        renderOrderList();
+
+        // ===== Configuraciones guardadas =====
+        const MAX_CONFIGS = 5;
+        let configs = JSON.parse(localStorage.getItem('configuraciones') || '[]');
+        let configActualId = null;
+
+        function guardarConfigs() {
+            localStorage.setItem('configuraciones', JSON.stringify(configs));
+        }
+
+        function leerConfigActualDesdeInputs() {
+            return {
+                tVerde: document.getElementById('tVerde').value,
+                tAmarillo: document.getElementById('tAmarillo').value,
+                tRojo: document.getElementById('tRojo').value,
+                tFlecha: document.getElementById('tFlecha').value,
+                tBajada: document.getElementById('tBajada').value,
+                order: [...order]
+            };
+        }
+
+        function aplicarConfigAInputs(cfg) {
+            document.getElementById('tVerde').value = cfg.tVerde;
+            document.getElementById('tAmarillo').value = cfg.tAmarillo;
+            document.getElementById('tRojo').value = cfg.tRojo;
+            document.getElementById('tFlecha').value = cfg.tFlecha;
+            document.getElementById('tBajada').value = cfg.tBajada;
+            order = [...cfg.order];
+            guardarOrden();
+            renderOrderList();
+
+            const duraciones = obtenerDuraciones();
+            const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
+            if (duracionCiclo > 0) actualizarTemporizadorLineal(duraciones, duracionCiclo, 0);
+        }
+
+        function guardarNuevaConfig() {
+            const nombre = document.getElementById('nombreConfig').value.trim();
+            if (!nombre) {
+                alert('Escribe un nombre para la configuración.');
+                return;
+            }
+            if (configs.length >= MAX_CONFIGS) {
+                alert(`Ya tienes ${MAX_CONFIGS} configuraciones guardadas. Elimina una o usa "Actualizar seleccionada" para sobrescribir.`);
+                return;
+            }
+            const nueva = { id: Date.now().toString(), nombre, ...leerConfigActualDesdeInputs() };
+            configs.push(nueva);
+            guardarConfigs();
+            configActualId = nueva.id;
+            renderConfigList();
+        }
+
+        function actualizarConfigSeleccionada() {
+            if (!configActualId) {
+                alert('Primero carga (o guarda como nueva) una configuración para poder actualizarla.');
+                return;
+            }
+            const idx = configs.findIndex(c => c.id === configActualId);
+            if (idx === -1) return;
+            const nombre = document.getElementById('nombreConfig').value.trim() || configs[idx].nombre;
+            configs[idx] = { id: configActualId, nombre, ...leerConfigActualDesdeInputs() };
+            guardarConfigs();
+            renderConfigList();
+        }
+
+        function cargarConfig(id) {
+            const cfg = configs.find(c => c.id === id);
+            if (!cfg) return;
+            aplicarConfigAInputs(cfg);
+            configActualId = id;
+            document.getElementById('nombreConfig').value = cfg.nombre;
+            renderConfigList();
+        }
+
+        function eliminarConfig(id) {
+            if (!confirm('¿Eliminar esta configuración?')) return;
+            configs = configs.filter(c => c.id !== id);
+            guardarConfigs();
+            if (configActualId === id) {
+                configActualId = null;
+                document.getElementById('nombreConfig').value = '';
+            }
+            renderConfigList();
+        }
+
+        function renderConfigList() {
+            const container = document.getElementById('configList');
+            const count = document.getElementById('configCount');
+            container.innerHTML = '';
+
+            if (configs.length === 0) {
+                container.innerHTML = '<div class="config-empty">Aún no tienes configuraciones guardadas.</div>';
+            } else {
+                configs.forEach((cfg) => {
+                    const row = document.createElement('div');
+                    row.className = 'config-row' + (cfg.id === configActualId ? ' active' : '');
+                    row.innerHTML = `
+                        <span class="c-name">${cfg.nombre}</span>
+                        <div class="c-btns">
+                            <button class="btn-load" onclick="cargarConfig('${cfg.id}')">Cargar</button>
+                            <button class="btn-delete" onclick="eliminarConfig('${cfg.id}')">Eliminar</button>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            count.innerText = `${configs.length}/${MAX_CONFIGS} configuraciones guardadas`;
+        }
+
+        renderConfigList();
+
+        // Dibuja la barra una primera vez aunque aún no se haya sincronizado
+        (function inicializarBarra() {
+            const duraciones = obtenerDuraciones();
+            const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
+            if (duracionCiclo > 0) actualizarTemporizadorLineal(duraciones, duracionCiclo, 0);
+        })();
+
+        setInterval(actualizarSemaforo, 200);
+        actualizarVisibilidad();
+        actualizarBotonesToggle();
+    </script>
+</body>
+</html>
