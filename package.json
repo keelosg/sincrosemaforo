@@ -1,5 +1,5 @@
 {
-  "name": "mi-app",
+  "name": "SincroSemaforo",
   "version": "1.0.0",
   "dependencies": {
     "@capacitor/core": "^6.0.0",
