@@ -21,28 +21,20 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Generate app icon
+        run: npx capacitor-assets generate --android
+
       - name: Patch AndroidManifest (vibración + lock screen)
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
-          # Permiso de vibración
           sed -i '/<manifest /a\    <uses-permission android:name="android.permission.VIBRATE" />' "$MANIFEST"
-          # Mostrar sobre pantalla de bloqueo y encender pantalla
           sed -i 's/android:name="\.MainActivity"/android:name=".MainActivity"\n            android:showWhenLocked="true"\n            android:turnScreenOn="true"/' "$MANIFEST"
           cat "$MANIFEST"
 
       - name: Patch MainActivity (fallback pantallas viejas, API < 27)
         run: |
           MAIN=android/app/src/main/java/com/SincroSemaforo/miapp/MainActivity.java
-          sed -i '/super.onCreate(savedInstanceState);/a\
-        if (android.os.Build.VERSION.SDK_INT >= 27) {\
-            setShowWhenLocked(true);\
-            setTurnScreenOn(true);\
-        } else {\
-            getWindow().addFlags(\
-                android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |\
-                android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |\
-                android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\
-        }' "$MAIN"
+          python3 -c "path='$MAIN'; c=open(path).read(); insert='\n    if (android.os.Build.VERSION.SDK_INT >= 27) {\n        setShowWhenLocked(true);\n        setTurnScreenOn(true);\n    } else {\n        getWindow().addFlags(\n            android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |\n            android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |\n            android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\n    }\n'; c=c.replace('super.onCreate(savedInstanceState);','super.onCreate(savedInstanceState);'+insert,1); open(path,'w').write(c)"
           cat "$MAIN"
 
       - name: Sync Capacitor
