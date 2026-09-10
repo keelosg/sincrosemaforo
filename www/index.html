@@ -75,6 +75,9 @@
         .toggle-row { display: flex; gap: 10px; margin-top: 12px; }
         .toggle-btn { flex: 1; padding: 10px; font-size: 0.85em; background: #00e676; color: #000; margin: 0; }
         .toggle-btn.off { background: #444; color: #999; }
+
+        /* Botón de acceso rápido a la bajada (modo simplificado) */
+        .btn-bajada-rapida { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: #333; color: #fff; margin: 10px 0 0 0; }
     </style>
 </head>
 <body>
@@ -104,6 +107,10 @@
         <div id="timerText" class="timer-text">--</div>
     </div>
 
+    <button id="btnBajadaRapida" class="btn-bajada-rapida hidden" onclick="editarBajadaRapido()">
+        ⏱️ Bajada: <span id="bajadaActualLabel">--</span>s
+    </button>
+
     <div id="upcomingBox" class="upcoming">
         <div class="upcoming-item">
             <div class="u-label">Siguiente</div>
@@ -120,7 +127,7 @@
     <div class="card">
         <div id="bajadaInputWrap">
             <label>Tiempo de bajada (s) — desde tu posición hasta el semáforo</label>
-            <input type="number" id="tBajada" value="55" style="margin-top:6px;">
+            <input type="number" id="tBajada" value="55" style="margin-top:6px;" oninput="actualizarBajadaLabel()">
         </div>
         <div class="toggle-row">
             <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
@@ -289,6 +296,21 @@
             document.getElementById('bajadaInputWrap').classList.toggle('hidden', modoSimplificado);
             document.getElementById('configCard').classList.toggle('hidden', modoSimplificado);
             document.getElementById('btnEditar').classList.toggle('hidden', !modoSimplificado);
+            document.getElementById('btnBajadaRapida').classList.toggle('hidden', !modoSimplificado);
+        }
+
+        // ===== Acceso rápido al tiempo de bajada (modo simplificado) =====
+        function editarBajadaRapido() {
+            const actual = document.getElementById('tBajada').value;
+            const nuevo = prompt('Nuevo tiempo de bajada (segundos):', actual);
+            if (nuevo !== null && nuevo.trim() !== '' && !isNaN(nuevo)) {
+                document.getElementById('tBajada').value = nuevo;
+                actualizarBajadaLabel();
+            }
+        }
+
+        function actualizarBajadaLabel() {
+            document.getElementById('bajadaActualLabel').innerText = document.getElementById('tBajada').value;
         }
 
         function obtenerDuraciones() {
@@ -462,6 +484,7 @@
             order = [...cfg.order];
             guardarOrden();
             renderOrderList();
+            actualizarBajadaLabel();
 
             const duraciones = obtenerDuraciones();
             const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
@@ -545,6 +568,20 @@
 
         renderConfigList();
 
+        // ===== Manejo del botón "atrás" físico de Android =====
+        // Con solo dos vistas posibles (configuración vs modo simplificado):
+        // - en modo simplificado, "atrás" muestra la configuración
+        // - en la vista de configuración, "atrás" cierra la app
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+            window.Capacitor.Plugins.App.addListener('backButton', () => {
+                if (modoSimplificado) {
+                    salirModoSimplificado();
+                } else {
+                    window.Capacitor.Plugins.App.exitApp();
+                }
+            });
+        }
+
         // Dibuja la barra una primera vez aunque aún no se haya sincronizado
         (function inicializarBarra() {
             const duraciones = obtenerDuraciones();
@@ -555,6 +592,7 @@
         setInterval(actualizarSemaforo, 200);
         actualizarVisibilidad();
         actualizarBotonesToggle();
+        actualizarBajadaLabel();
     </script>
 </body>
 </html>
