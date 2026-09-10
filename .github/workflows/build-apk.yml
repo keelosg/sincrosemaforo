@@ -18,18 +18,35 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Sync index.html to www/
-        run: npm run sync
-
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Patch AndroidManifest (vibración + lock screen)
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          # Permiso de vibración
+          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.VIBRATE" />' "$MANIFEST"
+          # Mostrar sobre pantalla de bloqueo y encender pantalla
+          sed -i 's/android:name="\.MainActivity"/android:name=".MainActivity"\n            android:showWhenLocked="true"\n            android:turnScreenOn="true"/' "$MANIFEST"
+          cat "$MANIFEST"
+
+      - name: Patch MainActivity (fallback pantallas viejas, API < 27)
+        run: |
+          MAIN=android/app/src/main/java/com/SincroSemaforo/miapp/MainActivity.java
+          sed -i '/super.onCreate(savedInstanceState);/a\
+        if (android.os.Build.VERSION.SDK_INT >= 27) {\
+            setShowWhenLocked(true);\
+            setTurnScreenOn(true);\
+        } else {\
+            getWindow().addFlags(\
+                android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |\
+                android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |\
+                android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\
+        }' "$MAIN"
+          cat "$MAIN"
+
       - name: Sync Capacitor
         run: npx cap sync
-
-      - name: Add VIBRATE permission
-        run: |
-          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.VIBRATE" />' android/app/src/main/AndroidManifest.xml
 
       - name: Setup JDK
         uses: actions/setup-java@v4
