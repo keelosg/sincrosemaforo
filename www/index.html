@@ -157,28 +157,6 @@
         let modoSimplificado = localStorage.getItem('modoSimplificado') === 'true';
         let alertaDisparada = false; // evita repetir la alerta dentro de la misma ventana
 
-        // ===== Wake Lock (mantener la pantalla encendida mientras se usa la app) =====
-        let wakeLock = null;
-
-        async function activarWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    wakeLock.addEventListener('release', () => {
-                        wakeLock = null;
-                    });
-                }
-            } catch (err) {
-                console.log('No se pudo activar wakeLock:', err);
-            }
-        }
-
-        document.addEventListener('visibilitychange', async () => {
-            if (wakeLock === null && document.visibilityState === 'visible' && modoSimplificado) {
-                await activarWakeLock();
-            }
-        });
-
         // ===== Sonido y vibración =====
         let sonidoActivado = localStorage.getItem('sonidoActivado') !== 'false';
         let vibracionActivada = localStorage.getItem('vibracionActivada') !== 'false';
@@ -213,11 +191,26 @@
             } catch (e) {}
         }
 
+        function vibrarNativo(duracionMs) {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
+                window.Capacitor.Plugins.Haptics.vibrate({ duration: duracionMs });
+            } else if (navigator.vibrate) {
+                navigator.vibrate(duracionMs); // fallback si alguna vez se abre en un navegador normal
+            }
+        }
+
         function dispararAlerta() {
-            // Vibración que se intensifica (pulsos más largos y pausas más cortas) y
+            // Vibración que se intensifica (pulsos más largos hacia el final) y
             // termina justo cuando comienza la ventana segura de bajada (~5000 ms en total)
-            if (vibracionActivada && navigator.vibrate) {
-                navigator.vibrate([100, 900, 250, 750, 400, 600, 550, 450, 700, 300]);
+            if (vibracionActivada) {
+                const pulsos = [
+                    { delay: 0,    dur: 100 },
+                    { delay: 1000, dur: 250 },
+                    { delay: 2000, dur: 400 },
+                    { delay: 3000, dur: 550 },
+                    { delay: 4000, dur: 700 }
+                ];
+                pulsos.forEach(p => setTimeout(() => vibrarNativo(p.dur), p.delay));
             }
             // Sonido que se intensifica en paralelo (más agudo y más largo hacia el final)
             if (sonidoActivado) {
@@ -303,17 +296,12 @@
             modoSimplificado = true;
             localStorage.setItem('modoSimplificado', 'true');
             obtenerAudioCtx(); // aprovechar este gesto del usuario para desbloquear el audio
-            activarWakeLock(); // aprovechar este mismo gesto para pedir el wake lock
             actualizarVisibilidad();
         }
 
         function salirModoSimplificado() {
             modoSimplificado = false;
             localStorage.setItem('modoSimplificado', 'false');
-            if (wakeLock) {
-                wakeLock.release();
-                wakeLock = null;
-            }
             actualizarVisibilidad();
         }
 
@@ -620,11 +608,6 @@
         actualizarVisibilidad();
         actualizarBotonesToggle();
         actualizarBajadaLabel();
-
-        // Si ya estaba en modo simplificado al recargar la app, pedir el wake lock también
-        if (modoSimplificado) {
-            activarWakeLock();
-        }
     </script>
 </body>
 </html>
