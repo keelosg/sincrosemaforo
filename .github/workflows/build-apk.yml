@@ -27,10 +27,9 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync
 
-      - name: Add VIBRATE permission to AndroidManifest
+      - name: Add VIBRATE permission
         run: |
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.VIBRATE" />' android/app/src/main/AndroidManifest.xml
-          grep VIBRATE android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.VIBRATE" />' android/app/src/main/AndroidManifest.xml
 
       - name: Setup JDK
         uses: actions/setup-java@v4
