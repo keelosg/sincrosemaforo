@@ -33,7 +33,8 @@ jobs:
 
       - name: Patch MainActivity (fallback pantallas viejas, API < 27)
         run: |
-          MAIN=android/app/src/main/java/com/SincroSemaforo/miapp/MainActivity.java
+          MAIN=$(find android/app/src/main/java -name "MainActivity.java")
+          echo "MainActivity encontrado en: $MAIN"
           python3 -c "path='$MAIN'; c=open(path).read(); insert='\n    if (android.os.Build.VERSION.SDK_INT >= 27) {\n        setShowWhenLocked(true);\n        setTurnScreenOn(true);\n    } else {\n        getWindow().addFlags(\n            android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |\n            android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |\n            android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\n    }\n'; c=c.replace('super.onCreate(savedInstanceState);','super.onCreate(savedInstanceState);'+insert,1); open(path,'w').write(c)"
           cat "$MAIN"
 
