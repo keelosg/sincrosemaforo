@@ -6,11 +6,13 @@
     <title>SincroSemáforo</title>
     <style>
         * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-        body { background: #121212; color: #fff; margin: 0; padding: 20px; text-align: center; }
+        body { background: #121212; color: #fff; margin: 0; padding: 20px; padding-bottom: 100px; text-align: center; }
         .card { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
         label { font-size: 0.8em; color: #aaa; }
         input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #333; background: #2a2a2a; color: #fff; font-size: 1em; }
+        input:disabled { opacity: 0.45; cursor: not-allowed; }
+        .bloqueado-config { opacity: 0.5; pointer-events: none; }
         button { width: 100%; padding: 15px; border-radius: 10px; border: none; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-sync { background: #00e676; color: #000; }
 
@@ -78,6 +80,21 @@
 
         /* Botón de acceso rápido a la bajada (modo simplificado) */
         .btn-bajada-rapida { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: #333; color: #fff; margin: 10px 0 0 0; }
+
+        /* Botón de pausa: fijo al fondo de la pantalla, grande y en rojo */
+        .btn-pausar {
+            position: fixed;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            width: auto;
+            padding: 20px;
+            font-size: 1.3em;
+            background: #d32f2f;
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
     </style>
 </head>
 <body>
@@ -111,6 +128,8 @@
         ⏱️ Bajada: <span id="bajadaActualLabel">--</span>s
     </button>
 
+    <button id="btnPausar" class="btn-pausar hidden" onclick="pausarYVolver()">⏸️ Pausar</button>
+
     <div id="upcomingBox" class="upcoming">
         <div class="upcoming-item">
             <div class="u-label">Siguiente</div>
@@ -124,15 +143,21 @@
         </div>
     </div>
 
-    <div class="card">
+    <div id="bajadaInputCard" class="card">
         <div id="bajadaInputWrap">
             <label>Tiempo de bajada (s) — desde tu posición hasta el semáforo</label>
             <input type="number" id="tBajada" value="55" style="margin-top:6px;" oninput="actualizarBajadaLabel()">
         </div>
+    </div>
+
+    <div id="togglesCard" class="card">
         <div class="toggle-row">
             <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
             <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
         </div>
+    </div>
+
+    <div id="graficoBajadaCard" class="card">
         <div class="linear-wrap">
             <div class="linear-bar" id="linearBar"></div>
             <div class="safe-bar" id="safeBar"></div>
@@ -155,6 +180,7 @@
     <script>
         let syncTime = localStorage.getItem('syncTime') ? parseInt(localStorage.getItem('syncTime')) : null;
         let modoSimplificado = localStorage.getItem('modoSimplificado') === 'true';
+        let valoresBloqueados = localStorage.getItem('valoresBloqueados') === 'true';
         let alertaDisparada = false; // evita repetir la alerta dentro de la misma ventana
 
         // ===== Sonido y vibración =====
@@ -290,12 +316,30 @@
             });
         }
 
+        // ===== Bloqueo de la configuración mientras el contador está corriendo =====
+        // Una vez sincronizado, toda la configuración (colores, orden de señales,
+        // tiempo de bajada, configuraciones guardadas) queda bloqueada, aunque se
+        // entre a "Ver configuración". Solo se libera al presionar Pausa.
+        function actualizarBloqueoConfiguracion() {
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada', 'nombreConfig'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = valoresBloqueados;
+            });
+            document.getElementById('setupCards').classList.toggle('bloqueado-config', valoresBloqueados);
+            document.getElementById('configCard').classList.toggle('bloqueado-config', valoresBloqueados);
+            document.getElementById('btnPausar').classList.toggle('hidden', !valoresBloqueados);
+        }
+
         function sincronizar() {
             syncTime = Date.now();
             localStorage.setItem('syncTime', syncTime);
             modoSimplificado = true;
             localStorage.setItem('modoSimplificado', 'true');
             obtenerAudioCtx(); // aprovechar este gesto del usuario para desbloquear el audio
+            iniciarIntervalo();
+            valoresBloqueados = true;
+            localStorage.setItem('valoresBloqueados', 'true');
+            actualizarBloqueoConfiguracion();
             actualizarVisibilidad();
         }
 
@@ -308,10 +352,37 @@
         function actualizarVisibilidad() {
             document.getElementById('setupCards').classList.toggle('hidden', modoSimplificado);
             document.getElementById('upcomingBox').classList.toggle('hidden', modoSimplificado);
-            document.getElementById('bajadaInputWrap').classList.toggle('hidden', modoSimplificado);
+            document.getElementById('bajadaInputCard').classList.toggle('hidden', modoSimplificado);
+            document.getElementById('togglesCard').classList.toggle('hidden', modoSimplificado);
             document.getElementById('configCard').classList.toggle('hidden', modoSimplificado);
             document.getElementById('btnEditar').classList.toggle('hidden', !modoSimplificado);
             document.getElementById('btnBajadaRapida').classList.toggle('hidden', !modoSimplificado);
+        }
+
+        // ===== Pausa (vista simple) =====
+        // Detiene por completo el contador (deja de recalcular el estado del
+        // semáforo) y regresa a la pantalla de configuración.
+        let intervaloSemaforo = null;
+
+        function iniciarIntervalo() {
+            if (!intervaloSemaforo) {
+                intervaloSemaforo = setInterval(actualizarSemaforo, 200);
+            }
+        }
+
+        function detenerIntervalo() {
+            if (intervaloSemaforo) {
+                clearInterval(intervaloSemaforo);
+                intervaloSemaforo = null;
+            }
+        }
+
+        function pausarYVolver() {
+            detenerIntervalo();
+            valoresBloqueados = false;
+            localStorage.setItem('valoresBloqueados', 'false');
+            actualizarBloqueoConfiguracion();
+            salirModoSimplificado();
         }
 
         // ===== Acceso rápido al tiempo de bajada (modo simplificado) =====
@@ -604,8 +675,9 @@
             if (duracionCiclo > 0) actualizarTemporizadorLineal(duraciones, duracionCiclo, 0);
         })();
 
-        setInterval(actualizarSemaforo, 200);
+        iniciarIntervalo();
         actualizarVisibilidad();
+        actualizarBloqueoConfiguracion();
         actualizarBotonesToggle();
         actualizarBajadaLabel();
     </script>
