@@ -430,11 +430,42 @@
             if (nuevo !== null && nuevo.trim() !== '' && !isNaN(nuevo)) {
                 document.getElementById('tBajada').value = nuevo;
                 actualizarBajadaLabel();
+                guardarParametros();
             }
         }
 
         function actualizarBajadaLabel() {
             document.getElementById('bajadaActualLabel').innerText = document.getElementById('tBajada').value;
+        }
+
+        // ===== Persistencia de parámetros =====
+        // Al volver del lock screen la WebView puede recargarse; sin guardar los
+        // valores, los inputs volverían a los valores por defecto del HTML. Así
+        // se conserva la configuración ingresada (verde/amarillo/rojo/flecha/bajada).
+        function guardarParametros() {
+            const params = {};
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                params[id] = document.getElementById(id).value;
+            });
+            localStorage.setItem('parametrosApp', JSON.stringify(params));
+        }
+
+        function restaurarParametros() {
+            const params = JSON.parse(localStorage.getItem('parametrosApp') || 'null');
+            if (!params || typeof params !== 'object') return;
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                const valor = params[id];
+                if (valor !== undefined && valor !== null && valor !== '') {
+                    document.getElementById(id).value = valor;
+                }
+            });
+        }
+
+        function vincularGuardadoParametros() {
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', guardarParametros);
+            });
         }
 
         function obtenerDuraciones() {
@@ -614,6 +645,7 @@
             const duraciones = obtenerDuraciones();
             const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
             if (duracionCiclo > 0) actualizarTemporizadorLineal(duraciones, duracionCiclo, 0);
+            guardarParametros();
         }
 
         function guardarNuevaConfig() {
@@ -692,6 +724,12 @@
         }
 
         renderConfigList();
+
+        // Restaura la configuración persistida ANTES de dibujar la barra y
+        // guarda cualquier cambio futuro en el lock screen.
+        restaurarParametros();
+        vincularGuardadoParametros();
+        guardarParametros();
 
         // ===== Manejo del botón "atrás" físico de Android =====
         // Con solo dos vistas posibles (configuración vs modo simplificado):
