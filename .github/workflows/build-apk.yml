@@ -53,6 +53,10 @@ jobs:
           import android.os.Bundle;
           import android.view.MotionEvent;
 
+          import androidx.lifecycle.Lifecycle;
+          import androidx.lifecycle.LifecycleEventObserver;
+          import androidx.lifecycle.LifecycleOwner;
+
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
@@ -95,21 +99,20 @@ jobs:
                       registerReceiver(lockReceiver, filter);
                   } catch (Exception ignored) {
                   }
-              }
 
-              @Override
-              protected void onDestroy() {
-                  super.onDestroy();
-                  try {
-                      unregisterReceiver(lockReceiver);
-                  } catch (Exception ignored) {
-                  }
-              }
-
-              @Override
-              protected void onResume() {
-                  super.onResume();
-                  setPantallaBloqueada(estaElMovilBloqueado(this));
+                  getLifecycle().addObserver(new LifecycleEventObserver() {
+                      @Override
+                      public void onStateChanged(LifecycleOwner source, Lifecycle.Event event) {
+                          if (event == Lifecycle.Event.ON_RESUME) {
+                              setPantallaBloqueada(estaElMovilBloqueado(MainActivity.this));
+                          } else if (event == Lifecycle.Event.ON_DESTROY) {
+                              try {
+                                  unregisterReceiver(lockReceiver);
+                              } catch (Exception ignored2) {
+                              }
+                          }
+                      }
+                  });
               }
 
               @Override
@@ -169,8 +172,14 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
+      - name: Renombrar APK con el nombre del build
+        run: |
+          BUILDDIR=android/app/build/outputs/apk/debug
+          mv "$BUILDDIR/app-debug.apk" "$BUILDDIR/app-debug-build-${{ github.run_number }}.apk"
+          ls -la "$BUILDDIR"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-debug-build-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/app-debug-build-${{ github.run_number }}.apk
