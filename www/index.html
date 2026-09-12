@@ -96,25 +96,26 @@
             z-index: 100;
         }
 
-        /* Overlay de pantalla bloqueada: bloquea TODA acción, solo se puede desbloquear */
-        #lockOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.9);
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 20px;
-            z-index: 1000;
-            user-select: none;
+        /* Vista bloqueada: muestra solo las luces + panel del temporizador */
+        body.bloqueado #setupCards,
+        body.bloqueado #bajadaInputCard,
+        body.bloqueado #togglesCard,
+        body.bloqueado #configCard,
+        body.bloqueado #btnEditar,
+        body.bloqueado #btnPausar,
+        body.bloqueado #btnBajadaRapida,
+        body.bloqueado #debugPane {
+            display: none !important;
         }
-        #lockOverlay .lock-icon { font-size: 4em; line-height: 1; }
-        #lockOverlay .lock-title { font-size: 1.7em; font-weight: 800; margin-top: 16px; }
-        #lockOverlay .lock-sub { font-size: 1em; color: #bbb; margin-top: 10px; max-width: 320px; }
-        #lockOverlay.hidden { display: none !important; }
+        body.bloqueado #lightBox {
+            display: flex !important;
+            height: auto;
+            min-height: 260px;
+            margin-top: 10px;
+        }
+        body.bloqueado #upcomingBox { display: flex !important; }
+        body.bloqueado #graficoBajadaCard { display: block !important; }
+        body.bloqueado .timer-text { font-size: 5em; }
 
         #debugPane {
             position: fixed;
@@ -165,12 +166,6 @@
     </button>
 
     <button id="btnPausar" class="btn-pausar hidden" onclick="pausarYVolver()">⏸️ Pausar</button>
-
-    <div id="lockOverlay" class="hidden">
-        <div class="lock-icon">🔒</div>
-        <div class="lock-title">MÓVIL BLOQUEADO</div>
-        <div class="lock-sub">Desbloquea tu teléfono para usar la app.</div>
-    </div>
 
     <div id="debugPane" class="hidden"></div>
 
@@ -396,13 +391,14 @@
 
         // ===== Bloqueo de pantalla =====
         // El estado lo marca la capa nativa (MainActivity): window.sincroScreenLocked.
-        // Mientras el móvil esté bloqueado, un overlay cubre la app y la vista nativa
-        // descarta todos los toques: la única acción posible es desbloquear el teléfono.
+        // Mientras el móvil esté bloqueado se muestra la vista simple (luces +
+        // temporizador) y la capa nativa descarta los toques: la única acción
+        // posible es desbloquear el teléfono.
         function actualizarEstadoBloqueo() {
             if (window.sincroScreenLocked !== undefined) {
                 sincroScreenLocked = window.sincroScreenLocked;
             }
-            document.getElementById('lockOverlay').classList.toggle('hidden', !sincroScreenLocked);
+            document.body.classList.toggle('bloqueado', sincroScreenLocked);
         }
 
         function actualizarVisibilidad() {
