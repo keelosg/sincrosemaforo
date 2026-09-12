@@ -448,6 +448,9 @@
                 params[id] = document.getElementById(id).value;
             });
             localStorage.setItem('parametrosApp', JSON.stringify(params));
+            try {
+                localStorage.setItem('configActualIdApp', configActualId || '');
+            } catch (e) { }
         }
 
         function restaurarParametros() {
@@ -459,13 +462,25 @@
                     document.getElementById(id).value = valor;
                 }
             });
+            const activa = localStorage.getItem('configActualIdApp');
+            if (activa) configActualId = activa;
+            actualizarBajadaLabel();
+            renderConfigList();
         }
 
         function vincularGuardadoParametros() {
             ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.addEventListener('input', guardarParametros);
+                if (!el) return;
+                el.addEventListener('input', guardarParametros);
+                el.addEventListener('change', guardarParametros);
             });
+            // Al pasar la app a segundo plano (volver a pantalla de bloqueo)
+            // se fuerza el guardado por si el proceso termina estando bloqueada.
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) guardarParametros();
+            });
+            window.addEventListener('pagehide', guardarParametros);
         }
 
         function obtenerDuraciones() {
