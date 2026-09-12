@@ -95,6 +95,42 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.5);
             z-index: 100;
         }
+
+        /* Overlay de pantalla bloqueada: bloquea TODA acción, solo se puede desbloquear */
+        #lockOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 1000;
+            user-select: none;
+        }
+        #lockOverlay .lock-icon { font-size: 4em; line-height: 1; }
+        #lockOverlay .lock-title { font-size: 1.7em; font-weight: 800; margin-top: 16px; }
+        #lockOverlay .lock-sub { font-size: 1em; color: #bbb; margin-top: 10px; max-width: 320px; }
+        #lockOverlay.hidden { display: none !important; }
+
+        #debugPane {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1100;
+            background: #111;
+            color: #7CFC00;
+            font: 11px/1.4 Consolas, monospace;
+            padding: 10px;
+            max-height: 60vh;
+            overflow: auto;
+            white-space: pre;
+        }
+        #debugPane.hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -129,6 +165,14 @@
     </button>
 
     <button id="btnPausar" class="btn-pausar hidden" onclick="pausarYVolver()">⏸️ Pausar</button>
+
+    <div id="lockOverlay" class="hidden">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-title">MÓVIL BLOQUEADO</div>
+        <div class="lock-sub">Desbloquea tu teléfono para usar la app.</div>
+    </div>
+
+    <div id="debugPane" class="hidden"></div>
 
     <div id="upcomingBox" class="upcoming">
         <div class="upcoming-item">
@@ -182,6 +226,7 @@
         let modoSimplificado = localStorage.getItem('modoSimplificado') === 'true';
         let valoresBloqueados = localStorage.getItem('valoresBloqueados') === 'true';
         let alertaDisparada = false; // evita repetir la alerta dentro de la misma ventana
+        let sincroScreenLocked = window.sincroScreenLocked === true;
 
         // ===== Sonido y vibración =====
         let sonidoActivado = localStorage.getItem('sonidoActivado') !== 'false';
@@ -349,6 +394,17 @@
             actualizarVisibilidad();
         }
 
+        // ===== Bloqueo de pantalla =====
+        // El estado lo marca la capa nativa (MainActivity): window.sincroScreenLocked.
+        // Mientras el móvil esté bloqueado, un overlay cubre la app y la vista nativa
+        // descarta todos los toques: la única acción posible es desbloquear el teléfono.
+        function actualizarEstadoBloqueo() {
+            if (window.sincroScreenLocked !== undefined) {
+                sincroScreenLocked = window.sincroScreenLocked;
+            }
+            document.getElementById('lockOverlay').classList.toggle('hidden', !sincroScreenLocked);
+        }
+
         function actualizarVisibilidad() {
             document.getElementById('setupCards').classList.toggle('hidden', modoSimplificado);
             document.getElementById('upcomingBox').classList.toggle('hidden', modoSimplificado);
@@ -392,12 +448,125 @@
             if (nuevo !== null && nuevo.trim() !== '' && !isNaN(nuevo)) {
                 document.getElementById('tBajada').value = nuevo;
                 actualizarBajadaLabel();
+                guardarParametros();
             }
         }
 
         function actualizarBajadaLabel() {
             document.getElementById('bajadaActualLabel').innerText = document.getElementById('tBajada').value;
         }
+
+        // ===== Persistencia de parámetros =====
+        // Al volver del lock screen la WebView puede recargarse; sin guardar los
+        // valores, los inputs volverían a los valores por defecto del HTML. Así
+        // se conserva la configuración ingresada (verde/amarillo/rojo/flecha/bajada).
+        let ultimaLecturaParams = null;
+        function guardarParametros() {
+            const params = {};
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                params[id] = document.getElementById(id).value;
+            });
+            localStorage.setItem('parametrosApp', JSON.stringify(params));
+            try {
+                localStorage.setItem('configActualIdApp', configActualId || '');
+            } catch (e) { }
+        }
+
+        function restaurarParametros() {
+            const params = JSON.parse(localStorage.getItem('parametrosApp') || 'null');
+            ultimaLecturaParams = localStorage.getItem('parametrosApp') || '(vacío)';
+            if (!params || typeof params !== 'object') return false;
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                const valor = params[id];
+                if (valor !== undefined && valor !== null && valor !== '') {
+                    document.getElementById(id).value = valor;
+                }
+            });
+            const activa = localStorage.getItem('configActualIdApp');
+            if (activa) configActualId = activa;
+            actualizarBajadaLabel();
+            renderConfigList();
+            return true;
+        }
+
+        function vincularGuardadoParametros() {
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', guardarParametros);
+                el.addEventListener('change', guardarParametros);
+            });
+            // Al pasar la app a segundo plano (volver a pantalla de bloqueo)
+            // se fuerza el guardado por si el proceso termina estando bloqueada.
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) guardarParametros();
+            });
+            window.addEventListener('pagehide', guardarParametros);
+        }
+
+        // ===== Diagnóstico de arranque =====
+        // Registra en localStorage qué hizo la app al cargar para detectar si la
+        // página se recarga al volver del lock screen y si los valores se restauran.
+        function registrarDiagnostico() {
+            try {
+                const lista = JSON.parse(localStorage.getItem('debugBootLog') || '[]');
+                const n = (parseInt(localStorage.getItem('debugBootCount')) || 0) + 1;
+                localStorage.setItem('debugBootCount', String(n));
+                lista.push({
+                    n,
+                    ts: new Date().toISOString(),
+                    paramsStored: localStorage.getItem('parametrosApp'),
+                    storagePrevtoRestore: ultimaLecturaParams,
+                    configActual: localStorage.getItem('configActualIdApp'),
+                    valuesTrasRestaurar: {
+                        verde: document.getElementById('tVerde').value,
+                        amarillo: document.getElementById('tAmarillo').value,
+                        rojo: document.getElementById('tRojo').value,
+                        flecha: document.getElementById('tFlecha').value,
+                        bajada: document.getElementById('tBajada').value
+                    },
+                    sync: syncTime,
+                    modo: localStorage.getItem('modoSimplificado'),
+                    bloqueado: valoresBloqueados
+                });
+                if (lista.length > 15) lista.splice(0, lista.length - 15);
+                localStorage.setItem('debugBootLog', JSON.stringify(lista));
+            } catch (e) { }
+        }
+
+        function verDiagnostico() {
+            const pane = document.getElementById('debugPane');
+            if (pane.classList.contains('hidden')) {
+                const log = JSON.parse(localStorage.getItem('debugBootLog') || '[]');
+                pane.innerText = 'ARRÁSTRALO HACIA ABAJO PARA CERRAR\n\n' + JSON.stringify(log, null, 1);
+                pane.classList.remove('hidden');
+            } else {
+                pane.classList.add('hidden');
+            }
+        }
+
+        // Mantener presionado el título abre el diagnóstico (toque en el panel lo cierra)
+        (function vincularDiag() {
+            const titulo = document.querySelector('h2');
+            const pane = document.getElementById('debugPane');
+            if (!titulo || !pane) return;
+            let pressTimer = null;
+            titulo.addEventListener('pointerdown', () => {
+                pressTimer = setTimeout(verDiagnostico, 600);
+            });
+            titulo.addEventListener('pointerup', () => clearTimeout(pressTimer));
+            titulo.addEventListener('pointerleave', () => clearTimeout(pressTimer));
+            // Un toque sobre el panel lo oculta (arrastrar hacia abajo > 80px también)
+            let y0 = 0;
+            pane.addEventListener('pointerdown', (e) => { y0 = e.clientY; });
+            pane.addEventListener('pointerup', (e) => {
+                if (e.clientY - y0 > 80) {
+                    pane.classList.add('hidden');
+                } else if (e.clientY === y0) {
+                    pane.classList.add('hidden');
+                }
+            });
+        })();
 
         function obtenerDuraciones() {
             const duraciones = {};
@@ -412,6 +581,7 @@
         }
 
         function actualizarSemaforo() {
+            actualizarEstadoBloqueo();
             const duraciones = obtenerDuraciones();
             const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
 
@@ -575,6 +745,7 @@
             const duraciones = obtenerDuraciones();
             const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
             if (duracionCiclo > 0) actualizarTemporizadorLineal(duraciones, duracionCiclo, 0);
+            guardarParametros();
         }
 
         function guardarNuevaConfig() {
@@ -654,6 +825,15 @@
 
         renderConfigList();
 
+        // Restaura la configuración persistida ANTES de dibujar la barra y
+        // guarda cualquier cambio futuro en el lock screen.
+        restaurarParametros();
+        vincularGuardadoParametros();
+        guardarParametros();
+
+        // Diagnóstico: registra este arranque (reload tras lock screen vs carga inicial)
+        registrarDiagnostico();
+
         // ===== Manejo del botón "atrás" físico de Android =====
         // Con solo dos vistas posibles (configuración vs modo simplificado):
         // - en modo simplificado, "atrás" muestra la configuración
@@ -680,6 +860,7 @@
         actualizarBloqueoConfiguracion();
         actualizarBotonesToggle();
         actualizarBajadaLabel();
+        actualizarEstadoBloqueo();
     </script>
 </body>
 </html>

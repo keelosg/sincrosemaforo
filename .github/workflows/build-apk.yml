@@ -18,6 +18,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Sincronizar web assets (index.html es la fuente de verdad)
+        run: bash sync-index.sh
+
       - name: Add Android platform
         run: npx cap add android
 
