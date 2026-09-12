@@ -36,122 +36,122 @@ jobs:
           MAIN=$(find android/app/src/main/java -name "MainActivity.java")
           echo "MainActivity encontrado en: $MAIN"
           python3 - "$MAIN" <<'PYEOF'
-import sys, re
-path = sys.argv[1]
-content = open(path).read()
-m = re.search(r'^package\s+([\w.]+);', content, re.MULTILINE)
-pkg = m.group(1) if m else 'com.sincrosemaforo.miapp'
+          import sys, re
+          path = sys.argv[1]
+          content = open(path).read()
+          m = re.search(r'^package\s+([\w.]+);', content, re.MULTILINE)
+          pkg = m.group(1) if m else 'com.sincrosemaforo.miapp'
 
-plantilla = '''package __PKG__;
+          plantilla = '''package __PKG__;
 
-import android.app.KeyguardManager;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.Build;
-import android.os.Bundle;
-import android.view.MotionEvent;
+          import android.app.KeyguardManager;
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.IntentFilter;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.view.MotionEvent;
 
-import com.getcapacitor.BridgeActivity;
+          import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {
+          public class MainActivity extends BridgeActivity {
 
-    private volatile boolean pantallaBloqueada = false;
+              private volatile boolean pantallaBloqueada = false;
 
-    private final BroadcastReceiver lockReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (Intent.ACTION_SCREEN_OFF.equals(action)) {
-                setPantallaBloqueada(true);
-            } else if (Intent.ACTION_SCREEN_ON.equals(action) || Intent.ACTION_USER_PRESENT.equals(action)) {
-                setPantallaBloqueada(estaElMovilBloqueado(context));
-            }
-        }
-    };
+              private final BroadcastReceiver lockReceiver = new BroadcastReceiver() {
+                  @Override
+                  public void onReceive(Context context, Intent intent) {
+                      String action = intent.getAction();
+                      if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                          setPantallaBloqueada(true);
+                      } else if (Intent.ACTION_SCREEN_ON.equals(action) || Intent.ACTION_USER_PRESENT.equals(action)) {
+                          setPantallaBloqueada(estaElMovilBloqueado(context));
+                      }
+                  }
+              };
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
 
-        if (Build.VERSION.SDK_INT >= 27) {
-            setShowWhenLocked(true);
-            setTurnScreenOn(true);
-        } else {
-            getWindow().addFlags(
-                android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
-                android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
-                android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        }
+                  if (Build.VERSION.SDK_INT >= 27) {
+                      setShowWhenLocked(true);
+                      setTurnScreenOn(true);
+                  } else {
+                      getWindow().addFlags(
+                          android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                          android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
+                          android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                  }
 
-        pantallaBloqueada = estaElMovilBloqueado(this);
+                  pantallaBloqueada = estaElMovilBloqueado(this);
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-        filter.addAction(Intent.ACTION_SCREEN_ON);
-        filter.addAction(Intent.ACTION_USER_PRESENT);
-        try {
-            registerReceiver(lockReceiver, filter);
-        } catch (Exception ignored) {
-        }
-    }
+                  IntentFilter filter = new IntentFilter();
+                  filter.addAction(Intent.ACTION_SCREEN_OFF);
+                  filter.addAction(Intent.ACTION_SCREEN_ON);
+                  filter.addAction(Intent.ACTION_USER_PRESENT);
+                  try {
+                      registerReceiver(lockReceiver, filter);
+                  } catch (Exception ignored) {
+                  }
+              }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        try {
-            unregisterReceiver(lockReceiver);
-        } catch (Exception ignored) {
-        }
-    }
+              @Override
+              protected void onDestroy() {
+                  super.onDestroy();
+                  try {
+                      unregisterReceiver(lockReceiver);
+                  } catch (Exception ignored) {
+                  }
+              }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        setPantallaBloqueada(estaElMovilBloqueado(this));
-    }
+              @Override
+              protected void onResume() {
+                  super.onResume();
+                  setPantallaBloqueada(estaElMovilBloqueado(this));
+              }
 
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        // Mientras el móvil esté bloqueado se descartan TODOS los toques:
-        // la única salida es desbloquear el teléfono.
-        if (pantallaBloqueada) {
-            return true;
-        }
-        return super.dispatchTouchEvent(ev);
-    }
+              @Override
+              public boolean dispatchTouchEvent(MotionEvent ev) {
+                  // Mientras el móvil esté bloqueado se descartan TODOS los toques:
+                  // la única salida es desbloquear el teléfono.
+                  if (pantallaBloqueada) {
+                      return true;
+                  }
+                  return super.dispatchTouchEvent(ev);
+              }
 
-    private boolean estaElMovilBloqueado(Context context) {
-        KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-        if (km == null) return false;
-        if (Build.VERSION.SDK_INT >= 23) {
-            return km.isDeviceLocked();
-        }
-        return km.isKeyguardLocked();
-    }
+              private boolean estaElMovilBloqueado(Context context) {
+                  KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+                  if (km == null) return false;
+                  if (Build.VERSION.SDK_INT >= 23) {
+                      return km.isDeviceLocked();
+                  }
+                  return km.isKeyguardLocked();
+              }
 
-    private void setPantallaBloqueada(boolean bloqueada) {
-        pantallaBloqueada = bloqueada;
-        try {
-            if (getBridge() != null && getBridge().getWebView() != null) {
-                final String js = "window.sincroScreenLocked = " + bloqueada + ";";
-                getBridge().getWebView().post(new Runnable() {
-                    @Override
-                    public void run() {
-                        getBridge().getWebView().evaluateJavascript(js, null);
-                    }
-                });
-            }
-        } catch (Exception ignored) {
-        }
-    }
-}
-'''
+              private void setPantallaBloqueada(boolean bloqueada) {
+                  pantallaBloqueada = bloqueada;
+                  try {
+                      if (getBridge() != null && getBridge().getWebView() != null) {
+                          final String js = "window.sincroScreenLocked = " + bloqueada + ";";
+                          getBridge().getWebView().post(new Runnable() {
+                              @Override
+                              public void run() {
+                                  getBridge().getWebView().evaluateJavascript(js, null);
+                              }
+                          });
+                      }
+                  } catch (Exception ignored) {
+                  }
+              }
+          }
+          '''
 
-open(path, 'w').write(plantilla.replace('__PKG__', pkg))
-print('MainActivity.java generado con bloqueo de interaccion en lock screen')
-PYEOF
+          open(path, 'w').write(plantilla.replace('__PKG__', pkg))
+          print('MainActivity.java generado con bloqueo de interaccion en lock screen')
+          PYEOF
           cat "$MAIN"
 
       - name: Sync Capacitor
