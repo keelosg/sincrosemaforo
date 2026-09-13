@@ -85,23 +85,21 @@
         <div class="medida"><span class="lbl">VERDE</span><div class="val" id="medVerde">--</div></div>
     </div>
 
-    <div class="card btn-row">
-        <button id="btnStart" class="btn-start" onclick="iniciar()">▶️ Iniciar</button>
-        <button id="btnStop" class="btn-stop" onclick="detener()" disabled>⏹️ Cancelar</button>
+    <div class="btn-row">
+        <button id="btnStop" class="btn-stop" onclick="detener()">✖ Cancelar y volver</button>
     </div>
 
-    <div id="status" class="status status-idle">Cámara apagada</div>
+    <div id="status" class="status status-idle">Iniciando cámara...</div>
 
     <div class="card">
-        <label style="font-size:0.75em;color:#aaa;">Transiciones detectadas</label>
-        <div class="log" id="log">Sin eventos todavía.</div>
+        <label style="font-size:0.75em;color:#aaa;">Detecciones</label>
+        <div class="log" id="log">Encuadra el semáforo...</div>
     </div>
 
     <div id="resultadoCard" class="card" style="display:none;">
-        <label style="font-size:0.75em;color:#aaa;">Ciclo calculado (config para tu app)</label>
+        <label style="font-size:0.75em;color:#aaa;">Ciclo calculado</label>
         <div class="resultado" id="resultadoTabla"></div>
-        <div class="nota">"Amarillo" incluye la superposición verde+amarillo y el breve apagón antes del rojo — queda fuera de la ventana segura, igual que en tu app.</div>
-        <div class="copiable" id="copiable"></div>
+        <div class="nota">Sincronizado correctamente. Volviendo a la vista con el temporizador...</div>
     </div>
 </div>
 
@@ -255,7 +253,6 @@
                 }
             } catch (e) {}
 
-            document.getElementById('btnStart').disabled = true;
             document.getElementById('btnStop').disabled = false;
             resultadoCard.style.display = 'none';
 
@@ -274,25 +271,25 @@
             appState = 'calibrando';
 
             statusBox.className = 'status status-calibrando';
-            statusBox.innerText = '🔵 Calibrando: observa el ciclo completo';
-            agregarLog('Calibración iniciada.');
+            statusBox.innerText = '🔵 Apunta al semáforo y mantenlo quieto...';
+            agregarLog('Cámara lista: esperando detectar el semáforo.');
 
             requestAnimationFrame(procesarFrame);
         } catch (err) {
             statusBox.className = 'status status-idle';
-            statusBox.innerText = 'Error al acceder a la cámara: ' + err.message;
+            statusBox.innerText = 'No se pudo acceder a la cámara: ' + err.message;
+            agregarLog('Error: ' + err.message);
         }
     }
 
     function detener() {
         if (rafId) cancelAnimationFrame(rafId);
         if (stream) stream.getTracks().forEach(t => t.stop());
-        document.getElementById('btnStart').disabled = false;
-        document.getElementById('btnStop').disabled = true;
         appState = 'idle';
         statusBox.className = 'status status-idle';
-        statusBox.innerText = 'Cámara apagada';
+        statusBox.innerText = 'Cámara detenida';
         agregarLog('Cámara detenida.');
+        window.location.href = 'index.html';
     }
 
     function procesarFrame() {
@@ -435,10 +432,10 @@
             if (distintas >= 2 && conteoFin[faseTerminada] >= 2) {
                 cicloCerrado = true;
                 mostrarResultado(duracionesFase);
-                agregarLog('✅ Ciclo completo detectado. Esperando que termine el VERDE...');
+                agregarLog('✅ Ciclo aprendido. Esperando que termine el VERDE...');
                 appState = 'esperando_fin_verde';
                 statusBox.className = 'status status-esperando';
-                statusBox.innerText = '🟡 Ciclo aprendido. Sincronizaré cuando termine el VERDE...';
+                statusBox.innerText = '🟡 Ciclo aprendido. Se sincroniza al terminar el VERDE...';
             }
         }
 
@@ -467,9 +464,8 @@
             if (mapaFases[k]) config[mapaFases[k]] = s;
             filas += `<tr><td>${k.toUpperCase()}</td><td>${s}s</td></tr>`;
         });
-        resultadoTabla.innerHTML = `<table>${filas}</table>`;
-        copiableBox.innerText = JSON.stringify(config, null, 2);
-        actualizarMedidas();
+resultadoTabla.innerHTML = `<table>${filas}</table>`;
+        if (copiableBox) copiableBox.innerText = JSON.stringify(config, null, 2);
     }
 
     function dispararSincronizacion(timestamp) {
@@ -547,6 +543,9 @@
         }
         return null;
     }
+
+    // La cámara arranca sola al abrir la página (la acción principal de la app)
+    iniciar();
 </script>
 </body>
 </html>

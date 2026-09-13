@@ -206,28 +206,28 @@
             z-index: 100;
         }
 
-        /* Botón AUTOMATICO: igual que pausar, fijo al fondo pero arriba de él */
-        .btn-auto {
-            position: fixed;
-            left: 20px;
-            right: 20px;
-            bottom: 85px;
-            width: auto;
-            padding: 20px;
-            font-size: 1.3em;
+        /* Botón principal de inicio: sincronizar con la cámara */
+        .hero-card { text-align: center; padding: 18px 14px; }
+        .hero-card .hero-title { font-size: 1.2em; font-weight: 800; margin-bottom: 4px; }
+        .hero-card .hero-sub { font-size: 0.8em; color: var(--faint); margin-bottom: 12px; }
+        .btn-cam {
+            width: 100%;
+            padding: 24px;
+            font-size: 1.45em;
+            font-weight: 900;
             background: #00897b;
             color: #fff;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-            z-index: 99;
+            border-radius: 14px;
+            box-shadow: 0 6px 18px rgba(0,137,123,0.4);
         }
 
         /* Vista bloqueada: muestra solo las luces + panel del temporizador */
         body.bloqueado #setupCards,
         body.bloqueado #bajadaInputCard,
         body.bloqueado #configCard,
+        body.bloqueado #heroCard,
         body.bloqueado #btnEditar,
         body.bloqueado #btnPausar,
-        body.bloqueado #btnAuto,
         body.bloqueado #btnBajadaRapida,
         body.bloqueado #btnHerramientas,
         body.bloqueado #panelHerramientas,
@@ -303,6 +303,13 @@
 
     <button id="btnEditar" class="btn-edit hidden" onclick="salirModoSimplificado()">⚙️ Ver configuración</button>
 
+    <div id="heroCard" class="card hero-card">
+        <div class="hero-title">Enfoca el semáforo y sincroniza</div>
+        <div class="hero-sub">La app detecta los tiempos del ciclo y arranca el temporizador automáticamente</div>
+        <button class="btn-cam" onclick="window.location.href='automatico.html'">📷 Sincronizar con cámara</button>
+        <div class="hero-sub" style="margin:10px 0 0 0;">Puedes ajustar los tiempos manualmente aquí abajo</div>
+    </div>
+
     <div id="setupCards">
     <div class="card">
         <div class="grid">
@@ -311,7 +318,7 @@
             <div><label>Rojo (s)</label><input type="number" id="tRojo" value="35"></div>
             <div><label>Flecha (s)</label><input type="number" id="tFlecha" value="15"></div>
         </div>
-        <button class="btn-sync" onclick="sincronizar()">¡SINCRONIZAR AHORA!</button>
+        <button class="btn-sync" onclick="sincronizar()">Sincronizar manual (empieza ahora)</button>
     </div>
 
     <div class="card">
@@ -330,8 +337,6 @@
     </button>
 
     <button id="btnPausar" class="btn-pausar hidden" onclick="pausarYVolver()">⏸️ Pausar</button>
-
-    <button id="btnAuto" class="btn-auto" onclick="window.location.href='automatico.html'">AUTOMATICO</button>
 
     <div id="debugPane" class="hidden"></div>
 
@@ -672,12 +677,12 @@
 
         function actualizarVisibilidad() {
             document.getElementById('setupCards').classList.toggle('hidden', modoSimplificado);
+            document.getElementById('heroCard').classList.toggle('hidden', modoSimplificado);
             document.getElementById('upcomingBox').classList.toggle('hidden', modoSimplificado);
             document.getElementById('bajadaInputCard').classList.toggle('hidden', modoSimplificado);
             document.getElementById('configCard').classList.toggle('hidden', modoSimplificado);
             document.getElementById('btnEditar').classList.toggle('hidden', !modoSimplificado);
             document.getElementById('btnBajadaRapida').classList.toggle('hidden', !modoSimplificado);
-            document.getElementById('btnAuto').classList.toggle('hidden', modoSimplificado);
         }
 
         // ===== Pausa (vista simple) =====
