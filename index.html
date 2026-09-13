@@ -78,6 +78,23 @@
         .toggle-btn { flex: 1; padding: 10px; font-size: 0.85em; background: #00e676; color: #000; margin: 0; }
         .toggle-btn.off { background: #444; color: #999; }
 
+        /* Pestaña de opciones (sonido y vibración) en la vista de configuración */
+        .btn-tab {
+            width: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 16px;
+            margin: 0 0 12px 0;
+            border-radius: 10px;
+            background: #2a2a2a;
+            color: #ddd;
+            font-size: 0.95em;
+        }
+        .tab-flecha { transition: transform 0.2s; }
+        .btn-tab.open .tab-flecha { transform: rotate(180deg); }
+
         /* Botón de acceso rápido a la bajada (modo simplificado) */
         .btn-bajada-rapida { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: #333; color: #fff; margin: 10px 0 0 0; }
 
@@ -99,7 +116,6 @@
         /* Vista bloqueada: muestra solo las luces + panel del temporizador */
         body.bloqueado #setupCards,
         body.bloqueado #bajadaInputCard,
-        body.bloqueado #togglesCard,
         body.bloqueado #configCard,
         body.bloqueado #btnEditar,
         body.bloqueado #btnPausar,
@@ -154,6 +170,16 @@
         <label>Orden de las señales (usa las flechas para reordenar)</label>
         <div class="order-list" id="orderList"></div>
     </div>
+
+    <button id="tabOpciones" class="btn-tab" onclick="togglePestanaOpciones()">
+        <span>🔊 Sonido y vibración</span> <span id="tabOpcionesFlecha" class="tab-flecha">▼</span>
+    </button>
+    <div id="panelOpciones" class="card hidden">
+        <div class="toggle-row">
+            <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
+            <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
+        </div>
+    </div>
     </div>
 
     <div id="lightBox" class="light-display bg-off">
@@ -186,13 +212,6 @@
         <div id="bajadaInputWrap">
             <label>Tiempo de bajada (s) — desde tu posición hasta el semáforo</label>
             <input type="number" id="tBajada" value="55" style="margin-top:6px;" oninput="actualizarBajadaLabel()">
-        </div>
-    </div>
-
-    <div id="togglesCard" class="card">
-        <div class="toggle-row">
-            <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
-            <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
         </div>
     </div>
 
@@ -313,6 +332,14 @@
             actualizarBotonesToggle();
         }
 
+        function togglePestanaOpciones() {
+            const panel = document.getElementById('panelOpciones');
+            const tab = document.getElementById('tabOpciones');
+            const abierto = !panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', abierto);
+            tab.classList.toggle('open', !abierto);
+        }
+
         // Configuración de cada fase: etiqueta, clase CSS, id del input de duración y color del punto
         const phasesConfig = {
             verde:     { label: 'VERDE',           className: 'bg-verde',     inputId: 'tVerde',     dot: '#388e3c' },
@@ -405,7 +432,6 @@
             document.getElementById('setupCards').classList.toggle('hidden', modoSimplificado);
             document.getElementById('upcomingBox').classList.toggle('hidden', modoSimplificado);
             document.getElementById('bajadaInputCard').classList.toggle('hidden', modoSimplificado);
-            document.getElementById('togglesCard').classList.toggle('hidden', modoSimplificado);
             document.getElementById('configCard').classList.toggle('hidden', modoSimplificado);
             document.getElementById('btnEditar').classList.toggle('hidden', !modoSimplificado);
             document.getElementById('btnBajadaRapida').classList.toggle('hidden', !modoSimplificado);
