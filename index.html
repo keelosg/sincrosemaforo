@@ -838,7 +838,7 @@
         function obtenerDuraciones() {
             const duraciones = {};
             for (const key in phasesConfig) {
-                duraciones[key] = (parseInt(document.getElementById(phasesConfig[key].inputId).value) || 0) * 1000;
+                duraciones[key] = (parseFloat(document.getElementById(phasesConfig[key].inputId).value) || 0) * 1000;
             }
             return duraciones;
         }
