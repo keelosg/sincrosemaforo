@@ -114,8 +114,8 @@
         .toggle-btn { flex: 1; padding: 10px; font-size: 0.85em; background: var(--accent); color: #000; margin: 0; }
         .toggle-btn.off { background: var(--muted-bg); color: var(--muted-fg); }
 
-        /* Botones flotantes: herramientas (arriba a la izquierda), tema (arriba a la derecha) */
-        #btnHerramientas, #btnTema {
+        /* Botón flotante de herramientas (arriba a la izquierda) */
+        #btnHerramientas {
             position: fixed;
             top: 10px;
             width: 48px;
@@ -133,7 +133,6 @@
             border: 1px solid var(--border);
         }
         #btnHerramientas { left: 10px; }
-        #btnTema { right: 10px; }
         h2 { padding-left: 64px; }
 
         /* Panel desplegable de herramientas */
@@ -231,7 +230,6 @@
         body.bloqueado #btnAuto,
         body.bloqueado #btnBajadaRapida,
         body.bloqueado #btnHerramientas,
-        body.bloqueado #btnTema,
         body.bloqueado #panelHerramientas,
         body.bloqueado #debugPane {
             display: none !important;
@@ -266,7 +264,6 @@
 <body>
 
     <button id="btnHerramientas" onclick="togglePanelHerramientas()">🧰</button>
-    <button id="btnTema" onclick="alternarTema()" title="Cambiar tema">🌙</button>
 
     <div id="panelHerramientas" class="hidden">
         <div class="tool-card">
@@ -294,6 +291,7 @@
             <div class="toggle-row" style="margin-top:0;">
                 <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
                 <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
+                <button id="btnTema" class="toggle-btn" onclick="alternarTema()">🌙 Tema: Oscuro</button>
             </div>
         </div>
 
@@ -480,7 +478,7 @@
         function aplicarTema() {
             document.body.classList.toggle('light', !temaOscuro);
             const btn = document.getElementById('btnTema');
-            if (btn) btn.innerText = temaOscuro ? '🌙' : '☀️';
+            if (btn) btn.innerText = temaOscuro ? '🌙 Tema: Oscuro' : '☀️ Tema: Claro';
         }
 
         function alternarTema() {
