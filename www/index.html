@@ -136,11 +136,20 @@
         .crono-parcial .cp-n { color: #888; }
         .crono-parcial .cp-t { font-family: Consolas, monospace; font-weight: 700; }
 
-        /* Regla de 3 simple */
+        /* Velocidad · distancia → tiempo */
         .regla3-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: left; }
         .regla3-grid label { display: block; margin-bottom: 2px; }
         .regla3-grid input { font-size: 1em; padding: 10px; }
-        #r3X { background: #1a1a1a; color: #00e676; font-weight: 800; }
+        .vel-result {
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #111;
+            color: #00e676;
+            font-size: 1.4em;
+            font-weight: 900;
+            font-family: Consolas, monospace;
+        }
 
         /* Botón de acceso rápido a la bajada (modo simplificado) */
         .btn-bajada-rapida { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: #333; color: #fff; margin: 10px 0 0 0; }
@@ -216,14 +225,13 @@
         </div>
 
         <div class="tool-card">
-            <div class="tool-title">Regla de 3 simple</div>
+            <div class="tool-title">Velocidad · distancia → tiempo</div>
             <div class="regla3-grid">
-                <div><label>A</label><input type="number" id="r3A" inputmode="decimal"></div>
-                <div><label>B (equivale a A)</label><input type="number" id="r3B" inputmode="decimal"></div>
-                <div><label>C</label><input type="number" id="r3C" inputmode="decimal"></div>
-                <div><label>X (equivale a C)</label><input type="number" id="r3X" readonly></div>
+                <div><label>Velocidad (km/h)</label><input type="number" id="velVelocidad" inputmode="decimal"></div>
+                <div><label>Distancia (km)</label><input type="number" id="velDistancia" inputmode="decimal"></div>
             </div>
-            <button class="btn-sync" onclick="calcularRegla3()">Calcular X</button>
+            <button class="btn-sync" onclick="calcularTiempo()">Calcular tiempo</button>
+            <div id="velResult" class="vel-result">--</div>
         </div>
 
         <div class="tool-card">
@@ -479,17 +487,22 @@
             cronoActualizarDisplay();
         }
 
-        // ===== Regla de 3 simple =====
-        function calcularRegla3() {
-            const A = parseFloat(document.getElementById('r3A').value);
-            const B = parseFloat(document.getElementById('r3B').value);
-            const C = parseFloat(document.getElementById('r3C').value);
-            const salida = document.getElementById('r3X');
-            if (!A || !B || !C) {
-                salida.value = '';
+        // ===== Velocidad · distancia → tiempo =====
+        // t = d / v  (v en km/h, d en km) → resultado en segundos
+        function calcularTiempo() {
+            const v = parseFloat(document.getElementById('velVelocidad').value);
+            const d = parseFloat(document.getElementById('velDistancia').value);
+            const salida = document.getElementById('velResult');
+            if (!v || !d || v <= 0) {
+                salida.innerText = 'Ingresa velocidad y distancia';
+                salida.style.color = '#ffb74d';
                 return;
             }
-            salida.value = ((B * C) / A).toFixed(2).replace(/\.00$/, '');
+            const seg = (d / v) * 3600;
+            const texto = `${seg.toFixed(1)} s`;
+            const extra = seg >= 60 ? ` (${(seg / 60).toFixed(1)} min)` : '';
+            salida.innerText = texto + extra;
+            salida.style.color = '#00e676';
         }
 
         // ===== Atajo de navegación =====
