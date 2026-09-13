@@ -73,27 +73,74 @@
         .hidden { display: none !important; }
         .btn-edit { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: #333; color: #fff; margin: 10px 0 0 0; }
 
-        /* Toggles de sonido y vibración */
+        /* Botones de sonido y vibración */
         .toggle-row { display: flex; gap: 10px; margin-top: 12px; }
         .toggle-btn { flex: 1; padding: 10px; font-size: 0.85em; background: #00e676; color: #000; margin: 0; }
         .toggle-btn.off { background: #444; color: #999; }
 
-        /* Pestaña de opciones (sonido y vibración) en la vista de configuración */
-        .btn-tab {
-            width: auto;
+        /* Botón de herramientas (arriba a la izquierda) */
+        #btnHerramientas {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            margin: 0;
+            border-radius: 50%;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 1.4em;
+            z-index: 950;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 14px 16px;
-            margin: 0 0 12px 0;
-            border-radius: 10px;
-            background: #2a2a2a;
-            color: #ddd;
-            font-size: 0.95em;
+            justify-content: center;
         }
-        .tab-flecha { transition: transform 0.2s; }
-        .btn-tab.open .tab-flecha { transform: rotate(180deg); }
+        h2 { padding-left: 64px; }
+
+        /* Panel desplegable de herramientas */
+        #panelHerramientas {
+            position: fixed;
+            top: 66px;
+            left: 10px;
+            width: min(340px, calc(100vw - 20px));
+            max-height: 78vh;
+            overflow-y: auto;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 14px;
+            z-index: 950;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        .tool-card { border-top: 1px solid #333; padding-top: 14px; margin-top: 14px; }
+        .tool-card:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+        .tool-title { font-size: 1.05em; font-weight: 800; text-align: left; margin-bottom: 10px; }
+
+        /* Cronómetro */
+        .crono-display {
+            font-family: Consolas, monospace;
+            font-size: 2.4em;
+            font-weight: 900;
+            background: #111;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        .crono-btns { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 8px; }
+        .crono-btns button { padding: 12px; margin: 0; font-size: 0.95em; background: #333; color: #fff; }
+        .crono-btns #btnCronoPrincipal { background: #00e676; color: #000; }
+        .crono-parciales { margin-top: 10px; max-height: 140px; overflow-y: auto; text-align: left; }
+        .crono-parcial { display: flex; justify-content: space-between; background: #2a2a2a; border-radius: 6px; padding: 6px 10px; margin-top: 4px; font-size: 0.9em; }
+        .crono-parcial .cp-n { color: #888; }
+        .crono-parcial .cp-t { font-family: Consolas, monospace; font-weight: 700; }
+
+        /* Regla de 3 simple */
+        .regla3-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: left; }
+        .regla3-grid label { display: block; margin-bottom: 2px; }
+        .regla3-grid input { font-size: 1em; padding: 10px; }
+        #r3X { background: #1a1a1a; color: #00e676; font-weight: 800; }
 
         /* Botón de acceso rápido a la bajada (modo simplificado) */
         .btn-bajada-rapida { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: #333; color: #fff; margin: 10px 0 0 0; }
@@ -120,6 +167,8 @@
         body.bloqueado #btnEditar,
         body.bloqueado #btnPausar,
         body.bloqueado #btnBajadaRapida,
+        body.bloqueado #btnHerramientas,
+        body.bloqueado #panelHerramientas,
         body.bloqueado #debugPane {
             display: none !important;
         }
@@ -152,6 +201,39 @@
 </head>
 <body>
 
+    <button id="btnHerramientas" onclick="togglePanelHerramientas()">🧰</button>
+
+    <div id="panelHerramientas" class="hidden">
+        <div class="tool-card">
+            <div class="tool-title">Cronómetro</div>
+            <div id="cronoDisplay" class="crono-display">00:00.00</div>
+            <div class="crono-btns">
+                <button id="btnCronoPrincipal" onclick="cronoPrincipal()">▶ Iniciar</button>
+                <button onclick="cronoParcial()">⏱ Parcial</button>
+                <button onclick="cronoReiniciar()">↺</button>
+            </div>
+            <div id="cronoParciales" class="crono-parciales"></div>
+        </div>
+
+        <div class="tool-card">
+            <div class="tool-title">Regla de 3 simple</div>
+            <div class="regla3-grid">
+                <div><label>A</label><input type="number" id="r3A" inputmode="decimal"></div>
+                <div><label>B (equivale a A)</label><input type="number" id="r3B" inputmode="decimal"></div>
+                <div><label>C</label><input type="number" id="r3C" inputmode="decimal"></div>
+                <div><label>X (equivale a C)</label><input type="number" id="r3X" readonly></div>
+            </div>
+            <button class="btn-sync" onclick="calcularRegla3()">Calcular X</button>
+        </div>
+
+        <div class="tool-card">
+            <div class="toggle-row" style="margin-top:0;">
+                <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
+                <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
+            </div>
+        </div>
+    </div>
+
     <h2>SincroSemáforo Viaducto</h2>
     <button id="btnEditar" class="btn-edit hidden" onclick="salirModoSimplificado()">⚙️ Ver configuración</button>
 
@@ -169,16 +251,6 @@
     <div class="card">
         <label>Orden de las señales (usa las flechas para reordenar)</label>
         <div class="order-list" id="orderList"></div>
-    </div>
-
-    <button id="tabOpciones" class="btn-tab" onclick="togglePestanaOpciones()">
-        <span>🔊 Sonido y vibración</span> <span id="tabOpcionesFlecha" class="tab-flecha">▼</span>
-    </button>
-    <div id="panelOpciones" class="card hidden">
-        <div class="toggle-row">
-            <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
-            <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
-        </div>
     </div>
     </div>
 
@@ -332,12 +404,87 @@
             actualizarBotonesToggle();
         }
 
-        function togglePestanaOpciones() {
-            const panel = document.getElementById('panelOpciones');
-            const tab = document.getElementById('tabOpciones');
-            const abierto = !panel.classList.contains('hidden');
-            panel.classList.toggle('hidden', abierto);
-            tab.classList.toggle('open', !abierto);
+        // ===== Panel de herramientas (botón arriba a la izquierda) =====
+        function togglePanelHerramientas() {
+            document.getElementById('panelHerramientas').classList.toggle('hidden');
+        }
+
+        // ===== Cronómetro convencional =====
+        let cronoTiempoMs = 0;
+        let cronoIntervalo = null;
+        let cronoParcialesLista = [];
+
+        function cronoFormatear(ms) {
+            const mm = String(Math.floor(ms / 60000)).padStart(2, '0');
+            const ss = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+            const cs = String(Math.floor((ms % 1000) / 10)).padStart(2, '0');
+            return `${mm}:${ss}.${cs}`;
+        }
+
+        function cronoActualizarDisplay() {
+            document.getElementById('cronoDisplay').innerText = cronoFormatear(cronoTiempoMs);
+        }
+
+        function cronoPrincipal() {
+            const btn = document.getElementById('btnCronoPrincipal');
+            if (cronoIntervalo) {
+                clearInterval(cronoIntervalo);
+                cronoIntervalo = null;
+                btn.innerText = '▶ Iniciar';
+                btn.style.background = '#00e676';
+                btn.style.color = '#000';
+            } else {
+                const inicio = performance.now() - cronoTiempoMs;
+                cronoIntervalo = setInterval(() => {
+                    cronoTiempoMs = performance.now() - inicio;
+                    cronoActualizarDisplay();
+                }, 25);
+                btn.innerText = '⏸ Pausar';
+                btn.style.background = '#fbc02d';
+                btn.style.color = '#000';
+            }
+        }
+
+        function cronoParcial() {
+            if (cronoTiempoMs === 0) return;
+            cronoParcialesLista.unshift(cronoTiempoMs);
+            const cont = document.getElementById('cronoParciales');
+            cont.innerHTML = '';
+            cronoParcialesLista.forEach((p, i) => {
+                const fila = document.createElement('div');
+                fila.className = 'crono-parcial';
+                fila.innerHTML = `<span class="cp-n">Parcial ${i + 1}</span><span class="cp-t">${cronoFormatear(p)}</span>`;
+                cont.appendChild(fila);
+            });
+            cronoActualizarDisplay();
+        }
+
+        function cronoReiniciar() {
+            if (cronoIntervalo) {
+                clearInterval(cronoIntervalo);
+                cronoIntervalo = null;
+            }
+            cronoTiempoMs = 0;
+            cronoParcialesLista = [];
+            document.getElementById('cronoParciales').innerHTML = '';
+            const btn = document.getElementById('btnCronoPrincipal');
+            btn.innerText = '▶ Iniciar';
+            btn.style.background = '#00e676';
+            btn.style.color = '#000';
+            cronoActualizarDisplay();
+        }
+
+        // ===== Regla de 3 simple =====
+        function calcularRegla3() {
+            const A = parseFloat(document.getElementById('r3A').value);
+            const B = parseFloat(document.getElementById('r3B').value);
+            const C = parseFloat(document.getElementById('r3C').value);
+            const salida = document.getElementById('r3X');
+            if (!A || !B || !C) {
+                salida.value = '';
+                return;
+            }
+            salida.value = ((B * C) / A).toFixed(2).replace(/\.00$/, '');
         }
 
         // Configuración de cada fase: etiqueta, clase CSS, id del input de duración y color del punto
