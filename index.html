@@ -247,15 +247,14 @@
         </div>
     </div>
 
-    <h2>SincroSemáforo Viaducto</h2>
     <button id="btnEditar" class="btn-edit hidden" onclick="salirModoSimplificado()">⚙️ Ver configuración</button>
 
     <div id="setupCards">
     <div class="card">
         <div class="grid">
-            <div><label>Verde (s)</label><input type="number" id="tVerde" value="30"></div>
-            <div><label>Amarillo (s)</label><input type="number" id="tAmarillo" value="3"></div>
-            <div><label>Rojo (s)</label><input type="number" id="tRojo" value="40"></div>
+            <div><label>Verde (s)</label><input type="number" id="tVerde" value="20"></div>
+            <div><label>Amarillo (s)</label><input type="number" id="tAmarillo" value="0"></div>
+            <div><label>Rojo (s)</label><input type="number" id="tRojo" value="35"></div>
             <div><label>Flecha (s)</label><input type="number" id="tFlecha" value="15"></div>
         </div>
         <button class="btn-sync" onclick="sincronizar()">¡SINCRONIZAR AHORA!</button>
@@ -520,8 +519,8 @@
             flecha:    { label: 'FLECHA VERDE ➔',  className: 'bg-flecha',    inputId: 'tFlecha',    dot: '#00897b' }
         };
 
-        // Orden por defecto (igual que el original: verde -> amarillo -> rojo -> flecha)
-        let order = JSON.parse(localStorage.getItem('phaseOrder') || 'null') || ['verde', 'amarillo', 'rojo', 'flecha'];
+        // Orden por defecto (configuración "10pm Viaducto": verde -> flecha -> amarillo -> rojo)
+        let order = JSON.parse(localStorage.getItem('phaseOrder') || 'null') || ['verde', 'flecha', 'amarillo', 'rojo'];
 
         function guardarOrden() {
             localStorage.setItem('phaseOrder', JSON.stringify(order));
@@ -910,6 +909,25 @@
         let configs = JSON.parse(localStorage.getItem('configuraciones') || '[]');
         let configActualId = null;
 
+        // Configuración de fábrica "10pm Viaducto" (se agrega la primera vez si no existe)
+        let seedConfigPendiente = false;
+        if (!configs.some(c => c.nombre === '10pm Viaducto') && configs.length < MAX_CONFIGS) {
+            const seed = {
+                id: 'default-10pm-viaducto',
+                nombre: '10pm Viaducto',
+                tVerde: '20',
+                tAmarillo: '0',
+                tRojo: '35',
+                tFlecha: '15',
+                tBajada: document.getElementById('tBajada').value || '55',
+                order: ['verde', 'flecha', 'amarillo', 'rojo']
+            };
+            configs.push(seed);
+            guardarConfigs();
+            configActualId = seed.id;
+            seedConfigPendiente = true;
+        }
+
         function guardarConfigs() {
             localStorage.setItem('configuraciones', JSON.stringify(configs));
         }
@@ -1018,6 +1036,11 @@
         }
 
         renderConfigList();
+
+        // Si se acaba de sembrar "10pm Viaducto", aplícala a los inputs
+        if (seedConfigPendiente) {
+            cargarConfig(configActualId);
+        }
 
         // Restaura la configuración persistida ANTES de dibujar la barra y
         // guarda cualquier cambio futuro en el lock screen.
