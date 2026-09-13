@@ -129,6 +129,7 @@
     let ordenCiclo = [];           // orden en que se observaron las fases
     let cicloCerrado = false;      // ya se observó el color de referencia volver
     let historialDuraciones = {};  // fase -> [ms observadas] (para promediar y ganar precisión)
+    let conteoFin = {};            // fase -> nº de veces que se ha visto terminar
 
     const eventLog = [];
 
@@ -223,6 +224,7 @@
             ordenCiclo = [];
             cicloCerrado = false;
             historialDuraciones = {};
+            conteoFin = {};
             actualizarMedidas();
             appState = 'calibrando';
 
@@ -367,39 +369,38 @@
         if (appState === 'sincronizado') return;
 
         const dur = ahora - inicioFase;
+        const esParcial = inicioFase === tAncla; // la fase que era el color de referencia: vimos su final pero no su inicio
+
         duracionesFase[faseTerminada] = dur;
-        (historialDuraciones[faseTerminada] = historialDuraciones[faseTerminada] || []).push(dur);
-        if (historialDuraciones[faseTerminada].length > 5) historialDuraciones[faseTerminada].shift();
+        if (!esParcial) {
+            (historialDuraciones[faseTerminada] = historialDuraciones[faseTerminada] || []).push(dur);
+            if (historialDuraciones[faseTerminada].length > 5) historialDuraciones[faseTerminada].shift();
+        }
         if (!ordenCiclo.includes(faseTerminada)) ordenCiclo.push(faseTerminada);
+        conteoFin[faseTerminada] = (conteoFin[faseTerminada] || 0) + 1;
         actualizarMedidas();
 
-        agregarLog(`Transición → ${nuevaFase.toUpperCase()} (${faseTerminada.toUpperCase()} ${Math.round(dur / 1000)}s)`);
+        agregarLog(`Transición → ${nuevaFase.toUpperCase()} (${faseTerminada.toUpperCase()} ${(dur / 1000).toFixed(1)}s)`);
+
+        // Una vuelta completa: ya terminaron al menos 2 colores distintos y
+        // alguno volvió a terminar (2ª ocurrencia). Funciona incluso si alguna
+        // fase dura 0s (p. ej. amarillo apagado).
+        if (!cicloCerrado) {
+            const distintas = ['verde', 'amarillo', 'rojo'].filter(k => conteoFin[k]).length;
+            if (distintas >= 2 && conteoFin[faseTerminada] >= 2) {
+                cicloCerrado = true;
+                mostrarResultado(duracionesFase);
+                agregarLog('✅ Ciclo completo detectado. Esperando que termine el VERDE...');
+                appState = 'esperando_fin_verde';
+                statusBox.className = 'status status-esperando';
+                statusBox.innerText = '🟡 Ciclo aprendido. Sincronizaré cuando termine el VERDE...';
+            }
+        }
 
         // Sincronizar al terminar el VERDE: el verde que acaba de terminar
         // comenzó en inicioFase — ese instante alinea la app con el ciclo real.
-        // (Se descarta el verde inicial si fue el color de referencia: su inicio
-        // es parcial porque no vimos cuándo empezó realmente.)
-        if (faseTerminada === 'verde' && inicioFase !== tAncla) {
-            if (appState === 'calibrando') {
-                if (cicloCerrado) {
-                    dispararSincronizacion(inicioFase);
-                } else {
-                    agregarLog('VERDE terminó pero aún no se completó el ciclo; esperando.');
-                }
-            } else if (appState === 'esperando_fin_verde') {
-                dispararSincronizacion(inicioFase);
-            }
-            return;
-        }
-
-        // Cuando el color de referencia vuelve → ciclo completo
-        if (nuevaFase === faseAncla && !cicloCerrado) {
-            cicloCerrado = true;
-            mostrarResultado(duracionesFase);
-            agregarLog('✅ Ciclo completo calculado. Esperando que termine el VERDE...');
-            appState = 'esperando_fin_verde';
-            statusBox.className = 'status status-esperando';
-            statusBox.innerText = '🟡 Ciclo aprendido. Sincronizaré cuando termine el VERDE...';
+        if (faseTerminada === 'verde' && !esParcial && cicloCerrado) {
+            dispararSincronizacion(inicioFase);
         }
     }
 
