@@ -235,11 +235,7 @@
 
         <div class="tool-card">
             <div class="tool-title">Navegación</div>
-            <div class="regla3-grid">
-                <div><label>Latitud</label><input type="number" step="any" id="navLat" inputmode="decimal" placeholder="-33.45"></div>
-                <div><label>Longitud</label><input type="number" step="any" id="navLng" inputmode="decimal" placeholder="-70.66"></div>
-            </div>
-            <button class="btn-sync" onclick="abrirNavegacion()">🧭 Navegar</button>
+            <button class="btn-sync" onclick="abrirNavegacion()">🧭 Abrir Google Maps</button>
         </div>
     </div>
 
@@ -497,22 +493,10 @@
         }
 
         // ===== Atajo de navegación =====
-        // Abre la app de navegación predeterminada del móvil usando el esquema
-        // geo:  (Android/IOS resuelven la app por defecto para coordenadas).
-        function guardarCoordenadas() {
-            localStorage.setItem('navLat', document.getElementById('navLat').value);
-            localStorage.setItem('navLng', document.getElementById('navLng').value);
-        }
-
+        // Abre la app de navegación por defecto (Google Maps). En Android el
+        // enlace https de maps se resuelve a la app instalada.
         function abrirNavegacion() {
-            const lat = parseFloat(document.getElementById('navLat').value);
-            const lng = parseFloat(document.getElementById('navLng').value);
-            if (isNaN(lat) || isNaN(lng)) {
-                alert('Ingresa la latitud y longitud del destino.');
-                return;
-            }
-            guardarCoordenadas();
-            window.location.href = `geo:${lat},${lng}?q=${lat},${lng}(Semáforo)`;
+            window.location.href = 'https://www.google.com/maps';
         }
 
         // Configuración de cada fase: etiqueta, clase CSS, id del input de duración y color del punto
@@ -1027,12 +1011,6 @@
         restaurarParametros();
         vincularGuardadoParametros();
         guardarParametros();
-
-        // Coordenadas del atajo de navegación (guarda cambios y restaura al abrir)
-        document.getElementById('navLat').addEventListener('input', guardarCoordenadas);
-        document.getElementById('navLng').addEventListener('input', guardarCoordenadas);
-        document.getElementById('navLat').value = localStorage.getItem('navLat') || '';
-        document.getElementById('navLng').value = localStorage.getItem('navLng') || '';
 
         // Diagnóstico: registra este arranque (reload tras lock screen vs carga inicial)
         registrarDiagnostico();
