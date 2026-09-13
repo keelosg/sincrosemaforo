@@ -1,53 +1,377 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AUTOMATICO · SincroSemáforo</title>
-    <style>
-        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-        :root {
-            --bg: #121212;
-            --card-bg: #1e1e1e;
-            --elev-bg: #2a2a2a;
-            --border: #333333;
-            --text: #ffffff;
-            --dim: #aaaaaa;
-            --accent: #00e676;
-            --btn-bg: #333333;
-            --btn-fg: #ffffff;
-        }
-        body.light {
-            --bg: #f4f5f7;
-            --card-bg: #ffffff;
-            --elev-bg: #e9ebee;
-            --border: #cdd1d6;
-            --text: #16181c;
-            --dim: #5c6268;
-            --accent: #00a45a;
-            --btn-bg: #d8dbe0;
-            --btn-fg: #16181c;
-        }
-        body { background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-bottom: 100px; text-align: center; }
-        .card { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-        button { width: 100%; padding: 15px; border-radius: 10px; border: none; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-back { background: var(--btn-bg); color: var(--btn-fg); }
-        .btn-go { background: var(--accent); color: #000; }
-        textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--elev-bg); color: var(--text); font-size: 1em; min-height: 200px; font-family: Consolas, monospace; }
-        #cameraView { margin-top: 10px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototipo Calibración 3 Zonas</title>
+<style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    html, body { height: 100%; }
+    body { background: #121212; color: #fff; margin: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ===== Zona superior: cámara, ocupa el espacio restante (~2/3) ===== */
+    .camara-zone { flex: 2 1 0; min-height: 0; position: relative; background: #000; }
+    .video-wrap { position: relative; width: 100%; height: 100%; }
+    video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    h2 { position: absolute; top: 8px; left: 12px; right: 12px; margin: 0; font-size: 0.95em; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
+    .sub { position: absolute; top: 32px; left: 12px; right: 12px; font-size: 0.7em; color: #ddd; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
+
+    /* ===== Zona inferior: controles, fijada a ~1/3 de la pantalla con scroll ===== */
+    .controles-zone { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 10px 12px; }
+
+    .card { background: #1e1e1e; padding: 10px; border-radius: 10px; margin-top: 8px; text-align: left; }
+    button { width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 0.9em; font-weight: bold; cursor: pointer; margin-top: 6px; }
+    .btn-row { display: flex; gap: 8px; }
+    .btn-row button { margin-top: 0; }
+    .btn-start { background: #00e676; color: #000; }
+    .btn-stop { background: #d32f2f; color: #fff; }
+    .btn-start:disabled, .btn-stop:disabled { opacity: 0.4; }
+    .status { margin-top: 8px; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; font-size: 0.9em; }
+    .status-idle { background: #2a2a2a; color: #aaa; }
+    .status-calibrando { background: rgba(41,121,255,0.15); color: #2979ff; }
+    .status-esperando { background: rgba(255,193,7,0.15); color: #ffc107; }
+    .status-sync { background: rgba(0,230,118,0.15); color: #00e676; }
+    .zonas { display: flex; gap: 6px; margin-top: 8px; }
+    .zona { flex: 1; text-align: center; padding: 6px; border-radius: 8px; background: #2a2a2a; }
+    .zona .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin-bottom: 3px; background: #333; }
+    .zona.on-rojo .dot { background: #d32f2f; box-shadow: 0 0 8px #d32f2f; }
+    .zona.on-amarillo .dot { background: #fbc02d; box-shadow: 0 0 8px #fbc02d; }
+    .zona.on-verde .dot { background: #388e3c; box-shadow: 0 0 8px #388e3c; }
+    .zona .lbl { font-size: 0.65em; color: #888; display: block; }
+    .log { font-size: 0.68em; color: #888; margin-top: 6px; max-height: 70px; overflow-y: auto; text-align: left; line-height: 1.4; }
+    .resultado table { width: 100%; border-collapse: collapse; font-size: 0.82em; margin-top: 6px; }
+    .resultado td { padding: 4px; border-bottom: 1px solid #333; }
+    .resultado td:first-child { font-weight: bold; }
+    .nota { font-size: 0.68em; color: #666; margin-top: 8px; }
+    .copiable { background: #2a2a2a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 0.72em; margin-top: 6px; white-space: pre-wrap; }
+</style>
 </head>
 <body>
-    <div class="card">
-        <h2>AUTOMATICO</h2>
-        <button class="btn-back" onclick="window.location.href='index.html'">⬅ Volver</button>
+
+<div class="camara-zone">
+    <div class="video-wrap">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+    </div>
+    <h2>🔄 Calibración por zonas</h2>
+    <div class="sub">Encuadra el semáforo completo dentro de las 3 franjas guía</div>
+</div>
+
+<div class="controles-zone">
+    <div class="zonas">
+        <div class="zona" id="zonaRojo"><div class="dot"></div><span class="lbl">ROJO</span></div>
+        <div class="zona" id="zonaAmarillo"><div class="dot"></div><span class="lbl">AMARILLO</span></div>
+        <div class="zona" id="zonaVerde"><div class="dot"></div><span class="lbl">VERDE</span></div>
     </div>
 
-    <!-- Aquí va el código de la función del botón -->
-    <div id="cameraView" class="card"></div>
+    <div class="card btn-row">
+        <button id="btnStart" class="btn-start" onclick="iniciar()">▶️ Iniciar</button>
+        <button id="btnStop" class="btn-stop" onclick="detener()" disabled>⏹️ Cancelar</button>
+    </div>
 
-    <script>
-        // El código de la cámara/automático va aquí (lo pegamos desde tu versión).
-    </script>
+    <div id="status" class="status status-idle">Cámara apagada</div>
+
+    <div class="card">
+        <label style="font-size:0.75em;color:#aaa;">Transiciones detectadas</label>
+        <div class="log" id="log">Sin eventos todavía.</div>
+    </div>
+
+    <div id="resultadoCard" class="card" style="display:none;">
+        <label style="font-size:0.75em;color:#aaa;">Ciclo calculado (config para tu app)</label>
+        <div class="resultado" id="resultadoTabla"></div>
+        <div class="nota">"Amarillo" incluye la superposición verde+amarillo y el breve apagón antes del rojo — queda fuera de la ventana segura, igual que en tu app.</div>
+        <div class="copiable" id="copiable"></div>
+    </div>
+</div>
+
+<script>
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const ctx = overlay.getContext('2d');
+    const statusBox = document.getElementById('status');
+    const logBox = document.getElementById('log');
+    const resultadoCard = document.getElementById('resultadoCard');
+    const resultadoTabla = document.getElementById('resultadoTabla');
+    const copiableBox = document.getElementById('copiable');
+    const zonaEls = { rojo: document.getElementById('zonaRojo'), amarillo: document.getElementById('zonaAmarillo'), verde: document.getElementById('zonaVerde') };
+
+    let stream = null;
+    let rafId = null;
+    let historialFase = [];
+    const TAMANO_HISTORIAL = 6;
+    let faseConfirmadaActual = null;
+
+    // Estados: 'idle' | 'calibrando' | 'esperando_verde' | 'sincronizado'
+    let appState = 'idle';
+    let cycleEvents = []; // {fase, timestamp}  fase ∈ {'rojo','amarillo','verde'}
+
+    const eventLog = [];
+
+    // Umbrales de "encendido" por zona (independientes del hue: solo brillo+saturación)
+    const UMBRAL_SAT = 0.30;
+    const UMBRAL_VAL = 0.30;
+
+    function rgbToHsv(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const d = max - min;
+        let h = 0;
+        if (d !== 0) {
+            if (max === r) h = ((g - b) / d) % 6;
+            else if (max === g) h = (b - r) / d + 2;
+            else h = (r - g) / d + 4;
+            h *= 60;
+            if (h < 0) h += 360;
+        }
+        const s = max === 0 ? 0 : d / max;
+        const v = max;
+        return { h, s, v };
+    }
+
+    function muestrearZona(sctx, x, y, w, h) {
+        let rSum = 0, gSum = 0, bSum = 0, n = 0;
+        let data;
+        try {
+            data = sctx.getImageData(x, y, w, h).data;
+        } catch (e) {
+            return { h: 0, s: 0, v: 0 };
+        }
+        for (let i = 0; i < data.length; i += 16) {
+            rSum += data[i]; gSum += data[i + 1]; bSum += data[i + 2];
+            n++;
+        }
+        if (n === 0) return { h: 0, s: 0, v: 0 };
+        return rgbToHsv(rSum / n, gSum / n, bSum / n);
+    }
+
+    // Regla de bucket: si rojo encendido -> 'rojo'. Si verde encendido y amarillo apagado -> 'verde'.
+    // Cualquier otra combinación (amarillo solo, verde+amarillo superpuestos, o ambos apagados) -> 'amarillo'
+    // (tramo de advertencia/transición, ya excluido de la ventana segura en tu app).
+    function calcularFase(rojoOn, amarilloOn, verdeOn) {
+        if (rojoOn) return 'rojo';
+        if (verdeOn && !amarilloOn) return 'verde';
+        return 'amarillo';
+    }
+
+    function agregarLog(mensaje) {
+        const hora = new Date().toLocaleTimeString();
+        eventLog.unshift(`[${hora}] ${mensaje}`);
+        if (eventLog.length > 20) eventLog.pop();
+        logBox.innerHTML = eventLog.join('<br>');
+    }
+
+    async function iniciar() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+            });
+            video.srcObject = stream;
+            await video.play();
+
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnStop').disabled = false;
+            resultadoCard.style.display = 'none';
+
+            historialFase = [];
+            faseConfirmadaActual = null;
+            cycleEvents = [];
+            appState = 'calibrando';
+
+            statusBox.className = 'status status-calibrando';
+            statusBox.innerText = '🔵 Calibrando: observa el ciclo completo';
+            agregarLog('Calibración iniciada.');
+
+            requestAnimationFrame(procesarFrame);
+        } catch (err) {
+            statusBox.className = 'status status-idle';
+            statusBox.innerText = 'Error al acceder a la cámara: ' + err.message;
+        }
+    }
+
+    function detener() {
+        if (rafId) cancelAnimationFrame(rafId);
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        document.getElementById('btnStart').disabled = false;
+        document.getElementById('btnStop').disabled = true;
+        appState = 'idle';
+        statusBox.className = 'status status-idle';
+        statusBox.innerText = 'Cámara apagada';
+        agregarLog('Cámara detenida.');
+    }
+
+    function procesarFrame() {
+        if (!video.videoWidth) {
+            rafId = requestAnimationFrame(procesarFrame);
+            return;
+        }
+
+        overlay.width = video.clientWidth;
+        overlay.height = video.clientHeight;
+
+        // Guía vertical: rectángulo alto en el centro, dividido en 3 franjas iguales
+        const guiaW = overlay.width * 0.30;
+        const guiaH = overlay.height * 0.65;
+        const guiaX = overlay.width / 2 - guiaW / 2;
+        const guiaY = overlay.height / 2 - guiaH / 2;
+        const franjaH = guiaH / 3;
+
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(guiaX, guiaY, guiaW, guiaH);
+        ctx.beginPath();
+        ctx.moveTo(guiaX, guiaY + franjaH); ctx.lineTo(guiaX + guiaW, guiaY + franjaH);
+        ctx.moveTo(guiaX, guiaY + franjaH * 2); ctx.lineTo(guiaX + guiaW, guiaY + franjaH * 2);
+        ctx.stroke();
+
+        const sampleCanvas = procesarFrame.sampleCanvas || (procesarFrame.sampleCanvas = document.createElement('canvas'));
+        sampleCanvas.width = video.videoWidth;
+        sampleCanvas.height = video.videoHeight;
+        const sctx = sampleCanvas.getContext('2d');
+        sctx.drawImage(video, 0, 0, sampleCanvas.width, sampleCanvas.height);
+
+        // El video usa object-fit:cover, así que se recorta para llenar el contenedor.
+        // Hay que compensar ese recorte al mapear coordenadas de pantalla -> pixeles nativos.
+        const escalaCover = Math.max(overlay.width / video.videoWidth, overlay.height / video.videoHeight);
+        const anchoMostrado = video.videoWidth * escalaCover;
+        const altoMostrado = video.videoHeight * escalaCover;
+        const offsetX = (anchoMostrado - overlay.width) / 2;
+        const offsetY = (altoMostrado - overlay.height) / 2;
+
+        function pantallaANativo(px, py) {
+            return {
+                x: (px + offsetX) / escalaCover,
+                y: (py + offsetY) / escalaCover
+            };
+        }
+
+        function zonaEnPixeles(indice) {
+            const p1 = pantallaANativo(guiaX, guiaY + franjaH * indice);
+            const p2 = pantallaANativo(guiaX + guiaW, guiaY + franjaH * (indice + 1));
+            return { x: p1.x, y: p1.y, w: p2.x - p1.x, h: p2.y - p1.y };
+        }
+
+        const zRojo = zonaEnPixeles(0);
+        const zAmarillo = zonaEnPixeles(1);
+        const zVerde = zonaEnPixeles(2);
+
+        const hsvRojo = muestrearZona(sctx, zRojo.x, zRojo.y, zRojo.w, zRojo.h);
+        const hsvAmarillo = muestrearZona(sctx, zAmarillo.x, zAmarillo.y, zAmarillo.w, zAmarillo.h);
+        const hsvVerde = muestrearZona(sctx, zVerde.x, zVerde.y, zVerde.w, zVerde.h);
+
+        const rojoOn = hsvRojo.s >= UMBRAL_SAT && hsvRojo.v >= UMBRAL_VAL;
+        const amarilloOn = hsvAmarillo.s >= UMBRAL_SAT && hsvAmarillo.v >= UMBRAL_VAL;
+        const verdeOn = hsvVerde.s >= UMBRAL_SAT && hsvVerde.v >= UMBRAL_VAL;
+
+        zonaEls.rojo.className = 'zona' + (rojoOn ? ' on-rojo' : '');
+        zonaEls.amarillo.className = 'zona' + (amarilloOn ? ' on-amarillo' : '');
+        zonaEls.verde.className = 'zona' + (verdeOn ? ' on-verde' : '');
+
+        const faseDetectada = calcularFase(rojoOn, amarilloOn, verdeOn);
+
+        historialFase.push(faseDetectada);
+        if (historialFase.length > TAMANO_HISTORIAL) historialFase.shift();
+
+        const todosIguales = historialFase.length === TAMANO_HISTORIAL && historialFase.every(f => f === historialFase[0]);
+        const faseEstable = todosIguales ? historialFase[0] : null;
+
+        if (faseEstable && faseEstable !== faseConfirmadaActual) {
+            const esNuevaTransicion = faseConfirmadaActual !== null;
+            faseConfirmadaActual = faseEstable;
+            if (esNuevaTransicion) {
+                manejarTransicion(faseEstable);
+            }
+        }
+
+        rafId = requestAnimationFrame(procesarFrame);
+    }
+
+    function manejarTransicion(fase) {
+        const ahora = Date.now();
+
+        if (appState === 'calibrando') {
+            agregarLog(`Transición → ${fase.toUpperCase()}`);
+            cycleEvents.push({ fase, timestamp: ahora });
+
+            if (cycleEvents.length >= 3 && fase === cycleEvents[0].fase) {
+                cerrarCiclo(ahora);
+            }
+        } else if (appState === 'esperando_verde') {
+            if (fase === 'verde') {
+                dispararSincronizacion(ahora);
+            } else {
+                agregarLog(`(${fase.toUpperCase()} detectado, esperando VERDE)`);
+            }
+        }
+    }
+
+    function cerrarCiclo(timestampCierre) {
+        const segmentos = [];
+        for (let i = 0; i < cycleEvents.length - 1; i++) {
+            segmentos.push({
+                fase: cycleEvents[i].fase,
+                duracionMs: cycleEvents[i + 1].timestamp - cycleEvents[i].timestamp
+            });
+        }
+
+        mostrarResultado(segmentos);
+        agregarLog('✅ Ciclo completo calculado.');
+
+        const faseDeCierre = cycleEvents[cycleEvents.length - 1].fase;
+
+        if (faseDeCierre === 'verde') {
+            dispararSincronizacion(timestampCierre);
+        } else {
+            appState = 'esperando_verde';
+            statusBox.className = 'status status-esperando';
+            statusBox.innerText = '🟡 Ciclo aprendido. Esperando el próximo VERDE para sincronizar...';
+        }
+    }
+
+    function mostrarResultado(segmentos) {
+        resultadoCard.style.display = 'block';
+        let filas = '';
+        const totales = {};
+        segmentos.forEach(seg => {
+            const s = Math.round(seg.duracionMs / 1000);
+            totales[seg.fase] = (totales[seg.fase] || 0) + s;
+            filas += `<tr><td>${seg.fase.toUpperCase()}</td><td>${s}s</td></tr>`;
+        });
+        resultadoTabla.innerHTML = `<table>${filas}</table>`;
+
+        const orden = [];
+        segmentos.forEach(s => { if (!orden.includes(s.fase)) orden.push(s.fase); });
+
+        const config = {
+            tVerde: totales.verde || 0,
+            tAmarillo: totales.amarillo || 0,
+            tRojo: totales.rojo || 0,
+            order: orden
+        };
+        copiableBox.innerText = JSON.stringify(config, null, 2);
+    }
+
+    function dispararSincronizacion(timestamp) {
+        appState = 'sincronizado';
+        statusBox.className = 'status status-sync';
+        const hora = new Date(timestamp).toLocaleTimeString();
+        statusBox.innerText = `✅ Sincronizado en VERDE a las ${hora}`;
+        agregarLog(`>>> SINCRONIZACIÓN DISPARADA a las ${hora} <<<`);
+
+        if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+        try {
+            const actx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = actx.createOscillator();
+            const gain = actx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            gain.gain.value = 0.3;
+            osc.connect(gain).connect(actx.destination);
+            osc.start();
+            osc.stop(actx.currentTime + 0.15);
+        } catch (e) {}
+    }
+</script>
 </body>
 </html>
