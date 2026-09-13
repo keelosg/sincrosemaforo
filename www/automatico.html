@@ -14,8 +14,9 @@
     .video-wrap { position: relative; width: 100%; height: 100%; }
     video { width: 100%; height: 100%; object-fit: cover; display: block; }
     canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-    h2 { position: absolute; top: 8px; left: 12px; right: 12px; margin: 0; font-size: 0.95em; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
-    .sub { position: absolute; top: 32px; left: 12px; right: 12px; font-size: 0.7em; color: #ddd; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
+    h2 { position: absolute; top: 8px; left: 56px; right: 12px; margin: 0; font-size: 0.95em; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
+    .sub { position: absolute; top: 32px; left: 56px; right: 12px; font-size: 0.7em; color: #ddd; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
+    .btn-atras { position: absolute; top: 8px; left: 8px; z-index: 3; width: 40px; height: 40px; padding: 0; margin: 0; border-radius: 50%; font-size: 1.1em; background: rgba(20,20,20,0.7); color: #fff; border: 1px solid #444; }
 
     /* ===== Zona inferior: controles, fijada a ~1/3 de la pantalla con scroll ===== */
     .controles-zone { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 10px 12px; }
@@ -39,6 +40,10 @@
     .zona.on-amarillo .dot { background: #fbc02d; box-shadow: 0 0 8px #fbc02d; }
     .zona.on-verde .dot { background: #388e3c; box-shadow: 0 0 8px #388e3c; }
     .zona .lbl { font-size: 0.65em; color: #888; display: block; }
+    .medidas { display: flex; gap: 6px; margin-top: 6px; }
+    .medida { flex: 1; text-align: center; padding: 4px 6px; border-radius: 8px; background: #1a1a1a; font-size: 0.72em; color: #aaa; }
+    .medida .val { font-size: 1.2em; font-weight: 800; color: #fff; font-family: Consolas, monospace; }
+    .medida .lbl { font-size: 0.6em; color: #666; display: block; }
     .log { font-size: 0.68em; color: #888; margin-top: 6px; max-height: 70px; overflow-y: auto; text-align: left; line-height: 1.4; }
     .resultado table { width: 100%; border-collapse: collapse; font-size: 0.82em; margin-top: 6px; }
     .resultado td { padding: 4px; border-bottom: 1px solid #333; }
@@ -54,8 +59,9 @@
         <video id="video" autoplay playsinline muted></video>
         <canvas id="overlay"></canvas>
     </div>
+    <button class="btn-atras" onclick="window.location.href='index.html'">‹</button>
     <h2>🔄 Calibración por zonas</h2>
-    <div class="sub">Encuadra el semáforo completo dentro de las 3 franjas guía</div>
+    <div class="sub">Encuadra el semáforo dentro de las 3 franjas</div>
 </div>
 
 <div class="controles-zone">
@@ -63,6 +69,12 @@
         <div class="zona" id="zonaRojo"><div class="dot"></div><span class="lbl">ROJO</span></div>
         <div class="zona" id="zonaAmarillo"><div class="dot"></div><span class="lbl">AMARILLO</span></div>
         <div class="zona" id="zonaVerde"><div class="dot"></div><span class="lbl">VERDE</span></div>
+    </div>
+
+    <div class="medidas">
+        <div class="medida"><span class="lbl">ROJO</span><div class="val" id="medRojo">--</div></div>
+        <div class="medida"><span class="lbl">AMARILLO</span><div class="val" id="medAmarillo">--</div></div>
+        <div class="medida"><span class="lbl">VERDE</span><div class="val" id="medVerde">--</div></div>
     </div>
 
     <div class="card btn-row">
@@ -116,6 +128,7 @@
     let duracionesFase = {};       // duración (ms) por fase del último segmento completo
     let ordenCiclo = [];           // orden en que se observaron las fases
     let cicloCerrado = false;      // ya se observó el color de referencia volver
+    let historialDuraciones = {};  // fase -> [ms observadas] (para promediar y ganar precisión)
 
     const eventLog = [];
 
@@ -172,6 +185,22 @@
         logBox.innerHTML = eventLog.join('<br>');
     }
 
+    // Duración promedio (ms) de una fase, a partir de las últimas observaciones
+    function medirFase(fase) {
+        const a = historialDuraciones[fase] || [];
+        if (!a.length) return 0;
+        return a.reduce((x, y) => x + y, 0) / a.length;
+    }
+
+    // Actualiza los contadores en vivo (chips con los segundos medidos por color)
+    const mapaMedidaId = { rojo: 'medRojo', amarillo: 'medAmarillo', verde: 'medVerde' };
+    function actualizarMedidas() {
+        ['rojo', 'amarillo', 'verde'].forEach(k => {
+            const ms = medirFase(k);
+            document.getElementById(mapaMedidaId[k]).textContent = ms ? (ms / 1000).toFixed(1) : '--';
+        });
+    }
+
     async function iniciar() {
         try {
             stream = await navigator.mediaDevices.getUserMedia({
@@ -193,6 +222,8 @@
             duracionesFase = {};
             ordenCiclo = [];
             cicloCerrado = false;
+            historialDuraciones = {};
+            actualizarMedidas();
             appState = 'calibrando';
 
             statusBox.className = 'status status-calibrando';
@@ -241,6 +272,22 @@
         ctx.moveTo(guiaX, guiaY + franjaH); ctx.lineTo(guiaX + guiaW, guiaY + franjaH);
         ctx.moveTo(guiaX, guiaY + franjaH * 2); ctx.lineTo(guiaX + guiaW, guiaY + franjaH * 2);
         ctx.stroke();
+
+        // Etiquetas + tinte de zona activa
+        const tintos = { rojo: 'rgba(211,47,47,0.25)', amarillo: 'rgba(251,192,45,0.25)', verde: 'rgba(56,142,60,0.25)' };
+        const nombres = ['rojo', 'amarillo', 'verde'];
+        const etiqColores = ['#d32f2f', '#fbc02d', '#388e3c'];
+        nombres.forEach((n, i) => {
+            const y0 = guiaY + i * franjaH;
+            if (faseConfirmadaActual === n) {
+                ctx.fillStyle = tintos[n];
+                ctx.fillRect(guiaX + 1, y0 + 1, guiaW - 2, franjaH - 2);
+            }
+            ctx.fillStyle = etiqColores[i];
+            ctx.font = 'bold ' + Math.round(franjaH * 0.22) + 'px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(n.toUpperCase(), guiaX + guiaW / 2, y0 + franjaH / 2 + 5);
+        });
 
         const sampleCanvas = procesarFrame.sampleCanvas || (procesarFrame.sampleCanvas = document.createElement('canvas'));
         sampleCanvas.width = video.videoWidth;
@@ -321,7 +368,10 @@
 
         const dur = ahora - inicioFase;
         duracionesFase[faseTerminada] = dur;
+        (historialDuraciones[faseTerminada] = historialDuraciones[faseTerminada] || []).push(dur);
+        if (historialDuraciones[faseTerminada].length > 5) historialDuraciones[faseTerminada].shift();
         if (!ordenCiclo.includes(faseTerminada)) ordenCiclo.push(faseTerminada);
+        actualizarMedidas();
 
         agregarLog(`Transición → ${nuevaFase.toUpperCase()} (${faseTerminada.toUpperCase()} ${Math.round(dur / 1000)}s)`);
 
@@ -366,12 +416,14 @@
         let filas = '';
         const config = { tVerde: 0, tAmarillo: 0, tRojo: 0, order: orden };
         orden.forEach(k => {
-            const s = Math.round(duraciones[k] / 1000);
+            const seg = medirFase(k) / 1000;
+            const s = Math.round(seg);
             if (mapaFases[k]) config[mapaFases[k]] = s;
             filas += `<tr><td>${k.toUpperCase()}</td><td>${s}s</td></tr>`;
         });
         resultadoTabla.innerHTML = `<table>${filas}</table>`;
         copiableBox.innerText = JSON.stringify(config, null, 2);
+        actualizarMedidas();
     }
 
     function dispararSincronizacion(timestamp) {
@@ -417,12 +469,14 @@
             while (orden[0] !== 'verde') orden.push(orden.shift());
         }
 
+        // Valores con décimas de segundo (parseFloat en la app) para minimizar el
+        // error acumulado por ciclo. Los semáforos suelen ser segundos enteros,
+        // así que calmamos al entero más cercano y restauramos la fase exacta.
         Object.keys(duracionesFase).forEach(k => {
-            if (mapaFases[k]) params[mapaFases[k]] = Math.round(duracionesFase[k] / 1000);
+            if (mapaFases[k]) params[mapaFases[k]] = medirFase(k) / 1000;
         });
-        if (params.tVerde === undefined || params.tVerde === null || params.tVerde === '') params.tVerde = prev.tVerde || 0;
-        if (params.tAmarillo === undefined || params.tAmarillo === null || params.tAmarillo === '') params.tAmarillo = prev.tAmarillo || 0;
-        if (params.tRojo === undefined || params.tRojo === null || params.tRojo === '') params.tRojo = prev.tRojo || 0;
+        const entero = cicloVueltoEntero(params);
+        if (entero) params.tVerde = entero.tVerde;
 
         localStorage.setItem('parametrosApp', JSON.stringify(params));
         localStorage.setItem('phaseOrder', JSON.stringify(orden));
@@ -432,6 +486,20 @@
         localStorage.setItem('configActualIdApp', '');
 
         setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+    }
+
+    // Si el ciclo es casi de segundos enteros, entrega la versión entera exacta
+    // (evita etapas de 14.98s y deja la app con periodos exactos y sin arrastre).
+    function cicloVueltoEntero(params) {
+        const v = [Number(params.tVerde) || 0, Number(params.tAmarillo) || 0, Number(params.tRojo) || 0];
+        const sum = v.reduce((a, b) => a + b, 0);
+        const sumEntera = Math.round(sum);
+        const err = Math.abs(sum - sumEntera);
+        if (sum > 0 && err < 0.6) {
+            const factor = sumEntera / sum;
+            return { tVerde: v[0] * factor, tAmarillo: v[1] * factor, tRojo: v[2] * factor };
+        }
+        return null;
     }
 </script>
 </body>
