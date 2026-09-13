@@ -102,14 +102,22 @@
     const TAMANO_HISTORIAL = 6;
     let faseConfirmadaActual = null;
 
-    // Estados: 'idle' | 'calibrando' | 'esperando_verde' | 'sincronizado'
+    // Estados: 'idle' | 'calibrando' | 'esperando_fin_verde' | 'sincronizado'
     let appState = 'idle';
-    let cycleEvents = []; // {fase, timestamp}  fase ∈ {'rojo','amarillo','verde'}
+
+    // Detección de ciclo por color de referencia:
+    // 1. Al abrir la cámara se fija el primer color detectado (faseAncla).
+    // 2. El ciclo se completa cuando ese color vuelve a aparecer.
+    // 3. Se sincroniza cuando termina el VERDE.
+    let faseAncla = null;          // color de referencia (el primero detectado)
+    let tAncla = null;             // instante de la primera detección (referencia parcial)
+    let faseActual = null;         // fase actual (avanza con transiciones estables)
+    let inicioFaseActual = null;   // instante en que empezó la fase actual
+    let duracionesFase = {};       // duración (ms) por fase del último segmento completo
+    let ordenCiclo = [];           // orden en que se observaron las fases
+    let cicloCerrado = false;      // ya se observó el color de referencia volver
 
     const eventLog = [];
-
-    // Config del último ciclo aprendido (para entregársela a la app al sincronizar)
-    let cicloConfig = null;
 
     // Umbrales de "encendido" por zona (independientes del hue: solo brillo+saturación)
     const UMBRAL_SAT = 0.30;
@@ -178,7 +186,13 @@
 
             historialFase = [];
             faseConfirmadaActual = null;
-            cycleEvents = [];
+            faseAncla = null;
+            tAncla = null;
+            faseActual = null;
+            inicioFaseActual = null;
+            duracionesFase = {};
+            ordenCiclo = [];
+            cicloCerrado = false;
             appState = 'calibrando';
 
             statusBox.className = 'status status-calibrando';
@@ -280,79 +294,83 @@
         const faseEstable = todosIguales ? historialFase[0] : null;
 
         if (faseEstable && faseEstable !== faseConfirmadaActual) {
-            const esNuevaTransicion = faseConfirmadaActual !== null;
+            const ahora = Date.now();
             faseConfirmadaActual = faseEstable;
-            if (esNuevaTransicion) {
-                manejarTransicion(faseEstable);
+
+            if (faseAncla === null) {
+                // Primer color detectado al abrir: queda como referencia del ciclo
+                faseAncla = faseEstable;
+                tAncla = ahora;
+                faseActual = faseEstable;
+                inicioFaseActual = ahora;
+                ordenCiclo = [faseEstable];
+                agregarLog(`Color de referencia: ${faseEstable.toUpperCase()}`);
+            } else {
+                // Transición: la fase terminada termina en este instante
+                manejarTransicion(faseActual, inicioFaseActual, faseEstable, ahora);
+                faseActual = faseEstable;
+                inicioFaseActual = ahora;
             }
         }
 
         rafId = requestAnimationFrame(procesarFrame);
     }
 
-    function manejarTransicion(fase) {
-        const ahora = Date.now();
+    function manejarTransicion(faseTerminada, inicioFase, nuevaFase, ahora) {
+        if (appState === 'sincronizado') return;
 
-        if (appState === 'calibrando') {
-            agregarLog(`Transición → ${fase.toUpperCase()}`);
-            cycleEvents.push({ fase, timestamp: ahora });
+        const dur = ahora - inicioFase;
+        duracionesFase[faseTerminada] = dur;
+        if (!ordenCiclo.includes(faseTerminada)) ordenCiclo.push(faseTerminada);
 
-            if (cycleEvents.length >= 3 && fase === cycleEvents[0].fase) {
-                cerrarCiclo(ahora);
+        agregarLog(`Transición → ${nuevaFase.toUpperCase()} (${faseTerminada.toUpperCase()} ${Math.round(dur / 1000)}s)`);
+
+        // Sincronizar al terminar el VERDE: el verde que acaba de terminar
+        // comenzó en inicioFase — ese instante alinea la app con el ciclo real.
+        // (Se descarta el verde inicial si fue el color de referencia: su inicio
+        // es parcial porque no vimos cuándo empezó realmente.)
+        if (faseTerminada === 'verde' && inicioFase !== tAncla) {
+            if (appState === 'calibrando') {
+                if (cicloCerrado) {
+                    dispararSincronizacion(inicioFase);
+                } else {
+                    agregarLog('VERDE terminó pero aún no se completó el ciclo; esperando.');
+                }
+            } else if (appState === 'esperando_fin_verde') {
+                dispararSincronizacion(inicioFase);
             }
-        } else if (appState === 'esperando_verde') {
-            if (fase === 'verde') {
-                dispararSincronizacion(ahora);
-            } else {
-                agregarLog(`(${fase.toUpperCase()} detectado, esperando VERDE)`);
-            }
-        }
-    }
-
-    function cerrarCiclo(timestampCierre) {
-        const segmentos = [];
-        for (let i = 0; i < cycleEvents.length - 1; i++) {
-            segmentos.push({
-                fase: cycleEvents[i].fase,
-                duracionMs: cycleEvents[i + 1].timestamp - cycleEvents[i].timestamp
-            });
+            return;
         }
 
-        cicloConfig = { segmentos };
-        mostrarResultado(segmentos);
-        agregarLog('✅ Ciclo completo calculado.');
-
-        const faseDeCierre = cycleEvents[cycleEvents.length - 1].fase;
-
-        if (faseDeCierre === 'verde') {
-            dispararSincronizacion(timestampCierre);
-        } else {
-            appState = 'esperando_verde';
+        // Cuando el color de referencia vuelve → ciclo completo
+        if (nuevaFase === faseAncla && !cicloCerrado) {
+            cicloCerrado = true;
+            mostrarResultado(duracionesFase);
+            agregarLog('✅ Ciclo completo calculado. Esperando que termine el VERDE...');
+            appState = 'esperando_fin_verde';
             statusBox.className = 'status status-esperando';
-            statusBox.innerText = '🟡 Ciclo aprendido. Esperando el próximo VERDE para sincronizar...';
+            statusBox.innerText = '🟡 Ciclo aprendido. Sincronizaré cuando termine el VERDE...';
         }
     }
 
-    function mostrarResultado(segmentos) {
+    function mostrarResultado(duraciones) {
         resultadoCard.style.display = 'block';
-        let filas = '';
-        const totales = {};
-        segmentos.forEach(seg => {
-            const s = Math.round(seg.duracionMs / 1000);
-            totales[seg.fase] = (totales[seg.fase] || 0) + s;
-            filas += `<tr><td>${seg.fase.toUpperCase()}</td><td>${s}s</td></tr>`;
-        });
-        resultadoTabla.innerHTML = `<table>${filas}</table>`;
+        const mapaFases = { verde: 'tVerde', amarillo: 'tAmarillo', rojo: 'tRojo' };
 
         const orden = [];
-        segmentos.forEach(s => { if (!orden.includes(s.fase)) orden.push(s.fase); });
+        Object.keys(duraciones).forEach(k => { if (!orden.includes(k)) orden.push(k); });
+        if (orden.includes('verde')) {
+            while (orden[0] !== 'verde') orden.push(orden.shift());
+        }
 
-        const config = {
-            tVerde: totales.verde || 0,
-            tAmarillo: totales.amarillo || 0,
-            tRojo: totales.rojo || 0,
-            order: orden
-        };
+        let filas = '';
+        const config = { tVerde: 0, tAmarillo: 0, tRojo: 0, order: orden };
+        orden.forEach(k => {
+            const s = Math.round(duraciones[k] / 1000);
+            if (mapaFases[k]) config[mapaFases[k]] = s;
+            filas += `<tr><td>${k.toUpperCase()}</td><td>${s}s</td></tr>`;
+        });
+        resultadoTabla.innerHTML = `<table>${filas}</table>`;
         copiableBox.innerText = JSON.stringify(config, null, 2);
     }
 
@@ -382,27 +400,29 @@
     // Guarda la config medida por la cámara (tiempos + orden) y regresa a la
     // vista simple de la app (index.html) ya sincronizada en VERDE.
     function aplicarConfigYVolver(timestamp) {
-        if (!cicloConfig || !cicloConfig.segmentos.length) return;
-
-        const totales = {};
-        const orden = [];
-        cicloConfig.segmentos.forEach(seg => {
-            const s = Math.round(seg.duracionMs / 1000);
-            totales[seg.fase] = (totales[seg.fase] || 0) + s;
-            if (!orden.includes(seg.fase)) orden.push(seg.fase);
-        });
-
-        // El ciclo debe comenzar en VERDE (momento de la sincronización)
-        while (orden[0] !== 'verde') orden.push(orden.shift());
-
+        const mapaFases = { verde: 'tVerde', amarillo: 'tAmarillo', rojo: 'tRojo' };
         const prev = JSON.parse(localStorage.getItem('parametrosApp') || '{}');
         const params = {
-            tVerde: totales.verde || 0,
-            tAmarillo: totales.amarillo || 0,
-            tRojo: totales.rojo || 0,
+            tVerde: prev.tVerde,
+            tAmarillo: prev.tAmarillo,
+            tRojo: prev.tRojo,
             tFlecha: prev.tFlecha || '15',
             tBajada: prev.tBajada || '55'
         };
+
+        // El ciclo debe comenzar en VERDE (momento de la sincronización)
+        const orden = [];
+        Object.keys(duracionesFase).forEach(k => { if (!orden.includes(k)) orden.push(k); });
+        if (orden.includes('verde')) {
+            while (orden[0] !== 'verde') orden.push(orden.shift());
+        }
+
+        Object.keys(duracionesFase).forEach(k => {
+            if (mapaFases[k]) params[mapaFases[k]] = Math.round(duracionesFase[k] / 1000);
+        });
+        if (params.tVerde === undefined || params.tVerde === null || params.tVerde === '') params.tVerde = prev.tVerde || 0;
+        if (params.tAmarillo === undefined || params.tAmarillo === null || params.tAmarillo === '') params.tAmarillo = prev.tAmarillo || 0;
+        if (params.tRojo === undefined || params.tRojo === null || params.tRojo === '') params.tRojo = prev.tRojo || 0;
 
         localStorage.setItem('parametrosApp', JSON.stringify(params));
         localStorage.setItem('phaseOrder', JSON.stringify(orden));
