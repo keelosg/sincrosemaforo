@@ -108,6 +108,9 @@
 
     const eventLog = [];
 
+    // Config del último ciclo aprendido (para entregársela a la app al sincronizar)
+    let cicloConfig = null;
+
     // Umbrales de "encendido" por zona (independientes del hue: solo brillo+saturación)
     const UMBRAL_SAT = 0.30;
     const UMBRAL_VAL = 0.30;
@@ -315,6 +318,7 @@
             });
         }
 
+        cicloConfig = { segmentos };
         mostrarResultado(segmentos);
         agregarLog('✅ Ciclo completo calculado.');
 
@@ -371,6 +375,43 @@
             osc.start();
             osc.stop(actx.currentTime + 0.15);
         } catch (e) {}
+
+        aplicarConfigYVolver(timestamp);
+    }
+
+    // Guarda la config medida por la cámara (tiempos + orden) y regresa a la
+    // vista simple de la app (index.html) ya sincronizada en VERDE.
+    function aplicarConfigYVolver(timestamp) {
+        if (!cicloConfig || !cicloConfig.segmentos.length) return;
+
+        const totales = {};
+        const orden = [];
+        cicloConfig.segmentos.forEach(seg => {
+            const s = Math.round(seg.duracionMs / 1000);
+            totales[seg.fase] = (totales[seg.fase] || 0) + s;
+            if (!orden.includes(seg.fase)) orden.push(seg.fase);
+        });
+
+        // El ciclo debe comenzar en VERDE (momento de la sincronización)
+        while (orden[0] !== 'verde') orden.push(orden.shift());
+
+        const prev = JSON.parse(localStorage.getItem('parametrosApp') || '{}');
+        const params = {
+            tVerde: totales.verde || 0,
+            tAmarillo: totales.amarillo || 0,
+            tRojo: totales.rojo || 0,
+            tFlecha: prev.tFlecha || '15',
+            tBajada: prev.tBajada || '55'
+        };
+
+        localStorage.setItem('parametrosApp', JSON.stringify(params));
+        localStorage.setItem('phaseOrder', JSON.stringify(orden));
+        localStorage.setItem('syncTime', String(timestamp));
+        localStorage.setItem('modoSimplificado', 'true');
+        localStorage.setItem('valoresBloqueados', 'true');
+        localStorage.setItem('configActualIdApp', '');
+
+        setTimeout(() => { window.location.href = 'index.html'; }, 1200);
     }
 </script>
 </body>
