@@ -122,14 +122,20 @@
     let stream = null;
     let rafId = null;
     let historialFase = [];
-    const TAMANO_HISTORIAL = 8;
+    const TAMANO_HISTORIAL = 6;
     let faseConfirmadaActual = null;
     let ultimoGlitch = 0;
     let ultimaDeteccion = 0;
     let vecesAnclaVista = 0;
+    // Instante del PRIMER frame en que el color cambió (previo a confirmar).
+    // Así las transiciones y el syncTime quedan pegados al cambio REAL de la luz
+    // y no a la demora de estabilidad (~0.3s), eliminando el delay tras sincronizar.
+    let inicioTransicion = null;
 
     // Tamaños de zona de detección: [fracción ancho, fracción alto] del overlay
-    const TAMANOS_ZONA = [[0.26, 0.26], [0.36, 0.32], [0.50, 0.42]];
+    // Zonas rectangulares [ancho, alto] en fracción de pantalla: más alta que
+    // ancha para aislar la columna del semáforo sin captar luces vecinas.
+    const TAMANOS_ZONA = [[0.22, 0.32], [0.28, 0.42], [0.36, 0.52]];
     let nivelZona = 1;
     const NOMBRES_ZONA = ['S', 'M', 'G'];
 
@@ -232,12 +238,17 @@
         return a.reduce((x, y) => x + y, 0) / a.length;
     }
 
+    // Segundos con hasta 3 decimales y coma decimal (formato de visualización)
+    function fmtSeg(ms) {
+        return (ms / 1000).toFixed(3).replace('.', ',');
+    }
+
     // Actualiza los contadores en vivo (chips con los segundos medidos por color)
     const mapaMedidaId = { rojo: 'medRojo', amarillo: 'medAmarillo', verde: 'medVerde' };
     function actualizarMedidas() {
         ['rojo', 'amarillo', 'verde'].forEach(k => {
             const ms = medirFase(k);
-            document.getElementById(mapaMedidaId[k]).textContent = ms ? (ms / 1000).toFixed(1) : '--';
+            document.getElementById(mapaMedidaId[k]).textContent = ms ? fmtSeg(ms) + ' s' : '--';
         });
     }
 
@@ -338,6 +349,7 @@
 
             historialFase = [];
             faseConfirmadaActual = null;
+            inicioTransicion = null;
             faseAncla = null;
             tAncla = null;
             faseActual = null;
@@ -458,6 +470,15 @@
             ultimaDeteccion = Date.now();
             historialFase.push(faseDetectada);
             if (historialFase.length > TAMANO_HISTORIAL) historialFase.shift();
+            // Marcar el PRIMER frame en que el color se apartó del confirmado.
+            // Si vuelve al confirmado (parpadeo), se limpia la marca pendiente.
+            if (faseConfirmadaActual) {
+                if (faseDetectada !== faseConfirmadaActual && inicioTransicion === null) {
+                    inicioTransicion = ultimaDeteccion;
+                } else if (faseDetectada === faseConfirmadaActual) {
+                    inicioTransicion = null;
+                }
+            }
         } else {
             // Sin señal: vaciar la ventana para que la estabilidad requiera
             // reencuadrar limpio desde cero (evita arrastrar un color viejo).
@@ -469,11 +490,18 @@
 
         if (faseEstable && faseEstable !== faseConfirmadaActual) {
             const ahora = Date.now();
+            // Instante real del cambio: el primer frame que mostró el nuevo
+            // color, +1 frame (≈33ms) porque la cámara ve el cambio ~un frame
+            // después de que ocurre. Así la imagen no va adelantada ni atrasada.
+            const tTransicion = inicioTransicion !== null && faseAncla !== null
+                ? Math.min(ahora, inicioTransicion + 33)
+                : ahora;
+            inicioTransicion = null;
 
             // Anti-temblor: ignorar cambios que duren menos de 0.8s. Son
             // glitches por mover la cámara (la luz sale y vuelve a la franja)
             // y no representan un cambio real de fase del semáforo.
-            const durActual = faseAncla === null ? 0 : ahora - inicioFaseActual;
+            const durActual = faseAncla === null ? 0 : tTransicion - inicioFaseActual;
             if (faseAncla !== null && durActual < 800) {
                 if (ahora - ultimoGlitch > 2500) {
                     ultimoGlitch = ahora;
@@ -485,17 +513,17 @@
                 if (faseAncla === null) {
                     // Primer color detectado al abrir: queda como referencia del ciclo
                     faseAncla = faseEstable;
-                    tAncla = ahora;
+                    tAncla = tTransicion;
                     faseActual = faseEstable;
-                    inicioFaseActual = ahora;
+                    inicioFaseActual = tTransicion;
                     ordenCiclo = [faseEstable];
                     vecesAnclaVista = 1;
                     agregarLog(`Color de referencia: ${faseEstable.toUpperCase()}`);
                 } else {
                     // Transición: la fase terminada termina en este instante
-                    manejarTransicion(faseActual, inicioFaseActual, faseEstable, ahora);
+                    manejarTransicion(faseActual, inicioFaseActual, faseEstable, tTransicion);
                     faseActual = faseEstable;
-                    inicioFaseActual = ahora;
+                    inicioFaseActual = tTransicion;
                     // Regresó la luz con la que empezamos: se observó la vuelta
                     // completa y esa luz vuelve a medirse completa.
                     if (faseEstable === faseAncla && !cicloCerrado) {
@@ -518,13 +546,13 @@
         duracionesFase[faseTerminada] = dur;
         if (!esParcial) {
             (historialDuraciones[faseTerminada] = historialDuraciones[faseTerminada] || []).push(dur);
-            if (historialDuraciones[faseTerminada].length > 5) historialDuraciones[faseTerminada].shift();
+            if (historialDuraciones[faseTerminada].length > 8) historialDuraciones[faseTerminada].shift();
         }
         if (!ordenCiclo.includes(faseTerminada)) ordenCiclo.push(faseTerminada);
         conteoFin[faseTerminada] = (conteoFin[faseTerminada] || 0) + 1;
         actualizarMedidas();
 
-        agregarLog(`Transición → ${nuevaFase.toUpperCase()} (${faseTerminada.toUpperCase()} ${(dur / 1000).toFixed(1)}s)`);
+        agregarLog(`Transición → ${nuevaFase.toUpperCase()} (${faseTerminada.toUpperCase()} ${fmtSeg(dur)} s)`);
 
         // Cierre del ciclo: la luz de referencia volvió -> vuelta completa.
         // (Se refuerza con un fallback genérico para ciclos raros.)
@@ -566,9 +594,9 @@
         const config = { tVerde: 0, tAmarillo: 0, tRojo: 0, order: orden };
         orden.forEach(k => {
             const seg = medirFase(k) / 1000;
-            const s = Math.round(seg);
+            const s = Math.round(seg * 1000) / 1000;
             if (mapaFases[k]) config[mapaFases[k]] = s;
-            filas += `<tr><td>${k.toUpperCase()}</td><td>${s}s</td></tr>`;
+            filas += `<tr><td>${k.toUpperCase()}</td><td>${fmtSeg(seg * 1000)} s</td></tr>`;
         });
 resultadoTabla.innerHTML = `<table>${filas}</table>`;
         if (copiableBox) copiableBox.innerText = JSON.stringify(config, null, 2);
@@ -617,14 +645,13 @@ resultadoTabla.innerHTML = `<table>${filas}</table>`;
             while (orden[0] !== 'verde') orden.push(orden.shift());
         }
 
-        // Valores con décimas de segundo (parseFloat en la app) para minimizar el
+        // Valores con hasta 3 decimales (parseFloat en la app) para minimizar el
         // error acumulado por ciclo. Los semáforos suelen ser segundos enteros,
-        // así que calmamos al entero más cercano y restauramos la fase exacta.
+        // así que calmamos los "casi enteros" y dejamos el resto con milisegundos.
         Object.keys(duracionesFase).forEach(k => {
             if (mapaFases[k]) params[mapaFases[k]] = medirFase(k) / 1000;
         });
-        const entero = cicloVueltoEntero(params);
-        if (entero) params.tVerde = entero.tVerde;
+        cicloVueltoEntero(params);
 
         localStorage.setItem('parametrosApp', JSON.stringify(params));
         localStorage.setItem('phaseOrder', JSON.stringify(orden));
@@ -637,18 +664,17 @@ resultadoTabla.innerHTML = `<table>${filas}</table>`;
         setTimeout(() => { window.location.href = 'index.html'; }, 1200);
     }
 
-    // Si el ciclo es casi de segundos enteros, entrega la versión entera exacta
-    // (evita etapas de 14.98s y deja la app con periodos exactos y sin arrastre).
+    // Ajusta cada fase a precisión de milisegundo (hasta 3 decimales) para que
+    // el ciclo no arrastre error acumulado. Si una fase quedó casi entera
+    // (los semáforos suelen ser segundos enteros exactos) la deja en el entero.
+    // Nada se reescala: cada luz se guarda tal como se midió.
     function cicloVueltoEntero(params) {
-        const v = [Number(params.tVerde) || 0, Number(params.tAmarillo) || 0, Number(params.tRojo) || 0];
-        const sum = v.reduce((a, b) => a + b, 0);
-        const sumEntera = Math.round(sum);
-        const err = Math.abs(sum - sumEntera);
-        if (sum > 0 && err < 0.6) {
-            const factor = sumEntera / sum;
-            return { tVerde: v[0] * factor, tAmarillo: v[1] * factor, tRojo: v[2] * factor };
-        }
-        return null;
+        ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(k => {
+            const s = Number(params[k]) || 0;
+            if (s <= 0) return;
+            const entero = Math.round(s);
+            params[k] = (Math.abs(entero - s) < 0.12) ? entero : Math.round(s * 1000) / 1000;
+        });
     }
 
     // La cámara arranca sola al abrir la página (la acción principal de la app)
