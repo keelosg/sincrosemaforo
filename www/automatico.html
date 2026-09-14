@@ -187,10 +187,13 @@
     // detecta la luz del semáforo aunque esté chica (4 m) y aunque no quede
     // centrada: basta con que los píxeles iluminados de un color superen a los
     // de los otros dentro del recuadro.
+    // Los rojos LED o desgastados salen anaranjados/rosados en la cámara:
+    // se amplía el rango del ROJO hacia el naranja (hue 0-40) y al magenta
+    // (300-360), y el AMARILLO real queda desde ~41 en adelante.
     const HUES = [
-        { key: 'rojo',     min: 323, max: 360 },
-        { key: 'rojo',     min: 0,   max: 14 },
-        { key: 'amarillo', min: 15,  max: 68 },
+        { key: 'rojo',     min: 300, max: 360 },
+        { key: 'rojo',     min: 0,   max: 40 },
+        { key: 'amarillo', min: 41,  max: 70 },
         { key: 'verde',    min: 72,  max: 185 }
     ];
 
@@ -205,7 +208,7 @@
         let lit = 0;
         for (let i = 0; i < data.length; i += 8) {
             const hsv = rgbToHsv(data[i], data[i + 1], data[i + 2]);
-            if (hsv.s >= 0.25 && hsv.v >= 0.25) {
+            if (hsv.s >= 0.18 && hsv.v >= 0.18) {
                 lit++;
                 const hh = (hsv.h + 360) % 360;
                 for (const b of HUES) {
@@ -220,8 +223,15 @@
     function fasePorConteo(cnt, minimo) {
         const total = cnt.rojo + cnt.amarillo + cnt.verde;
         if (total < minimo) return null;
-        if (cnt.rojo >= cnt.amarillo) return cnt.rojo >= cnt.verde ? 'rojo' : 'verde';
-        return cnt.amarillo >= cnt.verde ? 'amarillo' : 'verde';
+        // Un rojo con píxeles anaranjados se apoya en el 40% del amarillo para
+        // compensar el tinte de los rojos LED/desgastados (sin robarle el turno a un AMARILLO de verdad que venga solo).
+        const puntaje = {
+            rojo: cnt.rojo + cnt.amarillo * 0.4,
+            amarillo: cnt.amarillo,
+            verde: cnt.verde
+        };
+        if (puntaje.rojo >= puntaje.amarillo) return puntaje.rojo >= puntaje.verde ? 'rojo' : 'verde';
+        return puntaje.amarillo >= puntaje.verde ? 'amarillo' : 'verde';
     }
 
     function agregarLog(mensaje) {
@@ -563,10 +573,11 @@
             }
         }
 
-        // Sincronizar al terminar el VERDE: el verde que acaba de terminar
-        // comenzó en inicioFase — ese instante alinea la app con el ciclo real.
-        if (faseTerminada === 'verde' && !esParcial && cicloCerrado) {
-            dispararSincronizacion(inicioFase);
+        // Sincronizar cuando la luz CAMBIA a VERDE con el ciclo ya completo:
+        // ese instante es el inicio exacto del verde real. Al volver a la app el
+        // ciclo arranca justo ahí (no hay que esperar a que termine el verde).
+        if (nuevaFase === 'verde' && !esParcial && cicloCerrado) {
+            dispararSincronizacion(ahora);
         }
     }
 
@@ -574,10 +585,10 @@
         if (cicloCerrado) return;
         cicloCerrado = true;
         mostrarResultado(duracionesFase);
-        agregarLog('🔄 Ciclo completo: la luz de referencia volvió. Esperando el próximo VERDE...');
+        agregarLog('🔄 Ciclo completo: la luz de referencia volvió. Sincronizando al próximo cambio de luz...');
         appState = 'esperando_fin_verde';
         statusBox.className = 'status status-esperando';
-        statusBox.innerText = '🟡 Ciclo completo. Se sincroniza al terminar el VERDE...';
+        statusBox.innerText = '🟡 Ciclo completo. Sincroniza cuando cambie a VERDE...';
     }
 
     function mostrarResultado(duraciones) {
