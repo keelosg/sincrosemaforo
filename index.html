@@ -24,368 +24,173 @@
             --amarillo: #fbc02d;
             --verde: #388e3c;
             --flecha: #00897b;
-            --off-bg: #222222;
-            --off-fg: #666666;
         }
-        body.light {
-            --bg: #f4f5f7;
-            --card-bg: #ffffff;
-            --elev-bg: #e9ebee;
-            --deep-bg: #dfe1e5;
-            --border: #cdd1d6;
-            --text: #16181c;
-            --dim: #5c6268;
-            --faint: #8a9096;
-            --accent: #00a45a;
-            --btn-bg: #d8dbe0;
-            --btn-fg: #16181c;
-            --muted-bg: #e4e6ea;
-            --muted-fg: #7a8087;
-        }
-        body { background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-bottom: 100px; text-align: center; }
-        .card { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
-        label { font-size: 0.8em; color: var(--dim); }
-        input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--elev-bg); color: var(--text); font-size: 1em; }
-        input:disabled { opacity: 0.45; cursor: not-allowed; }
-        .bloqueado-config { opacity: 0.5; pointer-events: none; }
-        button { width: 100%; padding: 15px; border-radius: 10px; border: none; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-sync { background: var(--accent); color: #000; }
-
-        .light-display { height: 200px; border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: background 0.3s; margin-top: 20px; border: 4px solid var(--border); }
-        .state-text { font-size: 1.8em; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-        .timer-text { font-size: 3.5em; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-
-        /* Colores de las fases */
-        .bg-rojo { background: var(--rojo); color: white; }
-        .bg-amarillo { background: var(--amarillo); color: black; }
-        .bg-verde { background: var(--verde); color: white; }
-        .bg-flecha { background: var(--flecha); color: white; }
-        .bg-off { background: var(--off-bg); color: var(--off-fg); }
-
-        /* Orden de fases */
-        .order-list { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
-        .order-row { display: flex; align-items: center; gap: 8px; background: var(--elev-bg); border-radius: 8px; padding: 8px 10px; }
-        .order-row .pos { width: 22px; font-weight: bold; color: var(--dim); }
-        .order-row .name { flex: 1; text-align: left; font-weight: 600; }
-        .order-row .arrows { display: flex; gap: 4px; }
-        .order-row .arrows button { width: 36px; padding: 6px 0; margin: 0; font-size: 1em; }
-        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-
-        /* Próximas señales */
-        .upcoming { display: flex; gap: 10px; margin-top: 12px; }
-        .upcoming-item { flex: 1; background: var(--card-bg); border-radius: 10px; padding: 10px; }
-        .upcoming-item .u-label { font-size: 0.75em; color: var(--faint); }
-        .upcoming-item .u-name { font-weight: bold; margin-top: 4px; }
-        .upcoming-item .u-dur { font-size: 0.85em; color: var(--dim); margin-top: 2px; }
-
-        /* Temporizador lineal */
-        .linear-wrap { position: relative; margin-top: 30px; }
-        .linear-bar { position: relative; height: 36px; border-radius: 8px; overflow: hidden; background: var(--border); }
-        .segment { position: absolute; top: 0; bottom: 0; }
-        .safe-bar { position: relative; height: 14px; border-radius: 6px; overflow: hidden; background: var(--border); margin-top: 6px; }
-        .depart-zone { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, #ffd54f, #ffd54f 4px, #ffb300 4px, #ffb300 8px); }
-        .playhead { position: absolute; top: -4px; bottom: -4px; width: 4px; background: #fff; border-radius: 2px; box-shadow: 0 0 6px 2px rgba(255,255,255,0.9); transition: left 0.2s linear; z-index: 2; }
-        .bar-caption { font-size: 0.7em; color: var(--faint); margin-top: 4px; text-align: left; }
-        .window-status { margin-top: 14px; font-size: 0.95em; font-weight: bold; padding: 12px; border-radius: 8px; text-align: center; }
-        .window-ok { background: rgba(0,230,118,0.15); color: var(--accent); }
-        .window-warn { background: rgba(255,82,82,0.15); color: #ff5252; }
-
-        /* Configuraciones guardadas */
-        .config-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-        .config-row { display: flex; align-items: center; gap: 8px; background: var(--elev-bg); border-radius: 8px; padding: 8px 10px; border: 2px solid transparent; }
-        .config-row.active { border-color: var(--accent); }
-        .config-row .c-name { flex: 1; text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .config-row .c-btns { display: flex; gap: 6px; }
-        .config-row .c-btns button { width: auto; padding: 6px 10px; margin: 0; font-size: 0.85em; }
-        .btn-load { background: #2979ff; color: #fff; }
-        .btn-delete { background: #d32f2f; color: #fff; }
-        .btn-save-new { background: var(--accent); color: #000; }
-        .btn-update { background: #fbc02d; color: #000; }
-        .config-empty { color: var(--faint); font-size: 0.85em; text-align: left; }
-        .config-count { font-size: 0.75em; color: var(--faint); margin-top: 6px; text-align: left; }
-
-        /* Modo simplificado (después de sincronizar) */
+        body { background: var(--bg); color: var(--text); margin: 0; text-align: center; transition: background 0.25s; }
+        body.light { --bg: #f2f2f2; --card-bg: #ffffff; --border: #cccccc; }
+        body.light .btn-ajustes { color: #555; }
+        body.light .tagline, body.light .hint { color: #888; }
         .hidden { display: none !important; }
-        .btn-edit { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: var(--btn-bg); color: var(--btn-fg); margin: 10px 0 0 0; }
+        button { border: none; font-weight: bold; cursor: pointer; }
 
-        /* Botones de sonido y vibración */
-        .toggle-row { display: flex; gap: 10px; margin-top: 12px; }
-        .toggle-btn { flex: 1; padding: 10px; font-size: 0.85em; background: var(--accent); color: #000; margin: 0; }
+        /* ===== HOME (sin sincronizar): un botón gigante ===== */
+        #homeView { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px 26px; }
+        .brand { margin-bottom: 40px; }
+        .brand .ico { font-size: 3.2em; }
+        .brand h1 { font-size: 1.9em; margin: 8px 0 4px; letter-spacing: 0.5px; }
+        .brand .tagline { color: var(--faint); font-size: 0.9em; margin: 0; }
+        #btnCam {
+            width: 100%; max-width: 420px; padding: 34px 20px;
+            font-size: 1.55em; font-weight: 900; border-radius: 20px;
+            background: #00897b; color: #fff;
+            box-shadow: 0 8px 26px rgba(0,137,123,0.45);
+        }
+        .hint { color: var(--faint); font-size: 0.85em; max-width: 360px; margin: 18px auto 6px; line-height: 1.5; }
+        .btn-ajustes { background: transparent; color: var(--dim); font-size: 0.95em; padding: 12px; margin-top: 20px; }
+        .card { background: var(--card-bg); border-radius: 14px; padding: 16px; max-width: 420px; width: 100%; margin-top: 12px; }
+
+        /* Toggles de Ajustes */
+        .toggle-row { display: flex; flex-direction: column; gap: 8px; }
+        .toggle-btn { width: 100%; padding: 14px; font-size: 1em; border-radius: 10px; background: var(--accent); color: #000; }
         .toggle-btn.off { background: var(--muted-bg); color: var(--muted-fg); }
 
-        /* Botón flotante de herramientas (arriba a la izquierda) */
-        #btnHerramientas {
-            position: fixed;
-            top: 10px;
-            width: 48px;
-            height: 48px;
-            padding: 0;
-            margin: 0;
-            border-radius: 50%;
-            background: var(--elev-bg);
-            color: var(--text);
-            font-size: 1.4em;
-            z-index: 950;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid var(--border);
+        /* ===== VISTA CRONO: fase a pantalla completa ===== */
+        #lightBox {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            padding: 18px 16px 22px; transition: background 0.25s;
         }
-        #btnHerramientas { left: 10px; }
-        h2 { padding-left: 64px; }
+        .bg-rojo { background: var(--rojo); color: #fff; }
+        .bg-amarillo { background: var(--amarillo); color: #111; }
+        .bg-verde { background: var(--verde); color: #fff; }
+        .bg-flecha { background: var(--flecha); color: #fff; }
+        .bg-off { background: #191919; color: #888; }
 
-        /* Panel desplegable de herramientas */
-        #panelHerramientas {
-            position: fixed;
-            top: 66px;
-            left: 10px;
-            width: min(340px, calc(100vw - 20px));
-            max-height: 78vh;
-            overflow-y: auto;
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px;
-            z-index: 950;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        #cronoTop { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .order-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip {
+            padding: 6px 10px; border-radius: 999px; font-size: 0.72em; font-weight: 800;
+            color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); opacity: 0.35;
+            border: 2px solid rgba(255,255,255,0.25);
         }
-        .tool-card { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; }
-        .tool-card:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-        .tool-title { font-size: 1.05em; font-weight: 800; text-align: left; margin-bottom: 10px; }
-
-        /* Cronómetro */
-        .crono-display {
-            font-family: Consolas, monospace;
-            font-size: 2.4em;
-            font-weight: 900;
-            background: var(--deep-bg);
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 10px;
-            letter-spacing: 2px;
-        }
-        .crono-btns { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 8px; }
-        .crono-btns button { padding: 12px; margin: 0; font-size: 0.95em; background: var(--btn-bg); color: var(--btn-fg); }
-        .crono-btns #btnCronoPrincipal { background: var(--accent); color: #000; }
-        .crono-parciales { margin-top: 10px; max-height: 140px; overflow-y: auto; text-align: left; }
-        .crono-parcial { display: flex; justify-content: space-between; background: var(--elev-bg); border-radius: 6px; padding: 6px 10px; margin-top: 4px; font-size: 0.9em; }
-        .crono-parcial .cp-n { color: var(--faint); }
-        .crono-parcial .cp-t { font-family: Consolas, monospace; font-weight: 700; }
-
-        /* Velocidad · distancia → tiempo */
-        .regla3-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: left; }
-        .regla3-grid label { display: block; margin-bottom: 2px; }
-        .regla3-grid input { font-size: 1em; padding: 10px; }
-        .vel-result {
-            margin-top: 10px;
-            padding: 12px;
-            border-radius: 8px;
-            background: var(--deep-bg);
-            color: var(--accent);
-            font-size: 1.4em;
-            font-weight: 900;
-            font-family: Consolas, monospace;
+        .chip.active { opacity: 1; border-color: rgba(255,255,255,0.9); box-shadow: 0 0 12px rgba(255,255,255,0.35); }
+        #btnPausarMini {
+            width: 52px; height: 52px; padding: 0; border-radius: 50%;
+            background: rgba(0,0,0,0.35); color: #fff; font-size: 1.3em;
+            border: 1px solid rgba(255,255,255,0.35);
         }
 
-        /* Botón de acceso rápido a la bajada (modo simplificado) */
-        .btn-bajada-rapida { width: auto; display: inline-block; padding: 8px 14px; font-size: 0.85em; background: var(--btn-bg); color: var(--btn-fg); margin: 10px 0 0 0; }
+        .crono-centro { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .state-text { font-size: 2.6em; font-weight: 900; text-shadow: 0 3px 10px rgba(0,0,0,0.55); letter-spacing: 2px; }
+        .timer-text { font-size: 7em; font-weight: 900; line-height: 1; text-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+        .window-status { font-size: 1.2em; font-weight: 900; padding: 12px 20px; border-radius: 999px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
 
-        /* Botón de pausa: fijo al fondo de la pantalla, grande y en rojo */
-        .btn-pausar {
-            position: fixed;
-            left: 20px;
-            right: 20px;
-            bottom: 20px;
-            width: auto;
-            padding: 20px;
-            font-size: 1.3em;
-            background: #d32f2f;
-            color: #fff;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-            z-index: 100;
-        }
+        .bajada-wrap { width: 100%; max-width: 420px; }
+        .bajada-label { font-size: 0.8em; font-weight: 700; color: rgba(255,255,255,0.85); text-shadow: 0 1px 3px rgba(0,0,0,0.5); margin-bottom: 6px; }
+        .bajada-stepper { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .stepper-btn { width: 72px; height: 72px; border-radius: 50%; font-size: 2.2em; font-weight: 900; background: rgba(0,0,0,0.35); color: #fff; border: 1px solid rgba(255,255,255,0.35); }
+        .bajada-value { font-size: 3em; font-weight: 900; text-shadow: 0 3px 10px rgba(0,0,0,0.5); }
 
-        /* Botón principal de inicio: sincronizar con la cámara */
-        .hero-card { text-align: center; padding: 18px 14px; }
-        .hero-card .hero-title { font-size: 1.2em; font-weight: 800; margin-bottom: 4px; }
-        .hero-card .hero-sub { font-size: 0.8em; color: var(--faint); margin-bottom: 12px; }
-        .btn-cam {
-            width: 100%;
-            padding: 24px;
-            font-size: 1.45em;
-            font-weight: 900;
-            background: #00897b;
-            color: #fff;
-            border-radius: 14px;
-            box-shadow: 0 6px 18px rgba(0,137,123,0.4);
-        }
+        .upcoming { width: 100%; max-width: 420px; display: flex; gap: 10px; }
+        .upcoming-item { flex: 1; background: rgba(0,0,0,0.35); border-radius: 12px; padding: 10px; }
+        .upcoming-item .u-label { font-size: 0.7em; color: rgba(255,255,255,0.75); }
+        .upcoming-item .u-name { font-weight: 900; margin-top: 2px; }
+        .upcoming-item .u-dur { font-size: 0.85em; opacity: 0.9; }
 
-        /* Vista bloqueada: muestra solo las luces + panel del temporizador */
-        body.bloqueado #setupCards,
-        body.bloqueado #bajadaInputCard,
-        body.bloqueado #configCard,
-        body.bloqueado #heroCard,
-        body.bloqueado #btnEditar,
-        body.bloqueado #btnPausar,
-        body.bloqueado #btnBajadaRapida,
-        body.bloqueado #btnHerramientas,
-        body.bloqueado #panelHerramientas,
-        body.bloqueado #debugPane {
-            display: none !important;
-        }
-        body.bloqueado #lightBox {
-            display: flex !important;
-            height: auto;
-            min-height: 260px;
-            margin-top: 10px;
-        }
-        body.bloqueado #upcomingBox { display: flex !important; }
-        body.bloqueado #graficoBajadaCard { display: block !important; }
-        body.bloqueado .timer-text { font-size: 5em; }
+        .linear-wrap { width: 100%; max-width: 420px; margin-top: 4px; }
+        .linear-bar { position: relative; height: 26px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.3); }
+        .segment { position: absolute; top: 0; bottom: 0; }
+        .safe-bar { position: relative; height: 12px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.25); margin-top: 4px; }
+        .depart-zone { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, rgba(255,224,130,0.95), rgba(255,224,130,0.95) 4px, rgba(255,183,77,0.95) 4px, rgba(255,183,77,0.95) 8px); }
+        .playhead { position: absolute; top: -4px; bottom: -4px; width: 4px; background: #fff; border-radius: 2px; box-shadow: 0 0 8px 3px rgba(255,255,255,0.9); transition: left 0.15s linear; z-index: 2; }
 
-        #debugPane {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 1100;
-            background: #111;
-            color: #7CFC00;
-            font: 11px/1.4 Consolas, monospace;
-            padding: 10px;
-            max-height: 60vh;
-            overflow: auto;
-            white-space: pre;
-        }
-        #debugPane.hidden { display: none !important; }
+        /* ===== LOCKSCREEN: misma crono, sin controles, número enorme ===== */
+        body.bloqueado #homeView,
+        body.bloqueado .bajada-wrap,
+        body.bloqueado #btnPausarMini,
+        body.bloqueado #cronoTop .order-chips { display: none !important; }
+        body.bloqueado #lightBox { padding-bottom: 40px; }
+        body.bloqueado .timer-text { font-size: 9em; }
+        body.bloqueado #cronoTop { justify-content: flex-end; }
     </style>
 </head>
 <body>
 
-    <button id="btnHerramientas" onclick="togglePanelHerramientas()">🧰</button>
-
-    <div id="panelHerramientas" class="hidden">
-        <div class="tool-card">
-            <div class="tool-title">Cronómetro</div>
-            <div id="cronoDisplay" class="crono-display">00:00.00</div>
-            <div class="crono-btns">
-                <button id="btnCronoPrincipal" onclick="cronoPrincipal()">▶ Iniciar</button>
-                <button onclick="cronoParcial()">⏱ Parcial</button>
-                <button onclick="cronoReiniciar()">↺</button>
-            </div>
-            <div id="cronoParciales" class="crono-parciales"></div>
+    <!-- ===== HOME: un botón ===== -->
+    <div id="homeView">
+        <div class="brand">
+            <div class="ico">🚦</div>
+            <h1>SincroSemáforo</h1>
+            <p class="tagline">Enfoca, mide y corre</p>
         </div>
-
-        <div class="tool-card">
-            <div class="tool-title">Velocidad · distancia → tiempo</div>
-            <div class="regla3-grid">
-                <div><label>Velocidad (km/h)</label><input type="number" id="velVelocidad" inputmode="decimal"></div>
-                <div><label>Distancia (km)</label><input type="number" id="velDistancia" inputmode="decimal"></div>
-            </div>
-            <button class="btn-sync" onclick="calcularTiempo()">Calcular tiempo</button>
-            <div id="velResult" class="vel-result">--</div>
-        </div>
-
-        <div class="tool-card">
-            <div class="toggle-row" style="margin-top:0;">
+        <button id="btnCam" onclick="window.location.href='automatico.html'">📷 Enfocar semáforo</button>
+        <p class="hint">Mantén la cámara apuntando al semáforo una vuelta completa.
+        Cuando cambie el VERDE, la app arranca sola con tus tiempos.</p>
+        <button class="btn-ajustes" onclick="toggleAjustes()">⚙ Ajustes</button>
+        <div id="ajustesCard" class="card hidden">
+            <div class="toggle-row">
                 <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
                 <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
                 <button id="btnTema" class="toggle-btn" onclick="alternarTema()">🌙 Tema: Oscuro</button>
             </div>
         </div>
+    </div>
 
-        <div class="tool-card">
-            <div class="tool-title">Navegación</div>
-            <button class="btn-sync" onclick="abrirNavegacion()">🧭 Abrir Google Maps</button>
+    <!-- ===== VISTA CRONO: fase a pantalla completa ===== -->
+    <div id="cronoView" class="hidden">
+        <div id="lightBox" class="light-display bg-off">
+            <div id="cronoTop">
+                <div class="order-chips" id="orderChips"></div>
+                <button id="btnPausarMini" onclick="pausarYVolver()">⏸</button>
+            </div>
+
+            <div class="crono-centro">
+                <div id="stateText" class="state-text">SIN SINCRONIZAR</div>
+                <div id="timerText" class="timer-text">--</div>
+                <div id="windowStatus" class="window-status"></div>
+            </div>
+
+            <div class="bajada-wrap">
+                <div class="bajada-label">Tiempo hasta el semáforo</div>
+                <div class="bajada-stepper">
+                    <button class="stepper-btn" onclick="cambiarBajada(-1)">−</button>
+                    <div class="bajada-value"><span id="bajadaVal">--</span>s</div>
+                    <button class="stepper-btn" onclick="cambiarBajada(1)">+</button>
+                </div>
+            </div>
+
+            <div id="upcomingBox" class="upcoming">
+                <div class="upcoming-item">
+                    <div class="u-label">Siguiente</div>
+                    <div class="u-name" id="nextName">--</div>
+                    <div class="u-dur" id="nextDur">--</div>
+                </div>
+                <div class="upcoming-item">
+                    <div class="u-label">Después</div>
+                    <div class="u-name" id="afterName">--</div>
+                    <div class="u-dur" id="afterDur">--</div>
+                </div>
+            </div>
+
+            <div class="linear-wrap">
+                <div class="linear-bar" id="linearBar"></div>
+                <div class="safe-bar" id="safeBar"></div>
+            </div>
         </div>
     </div>
 
-    <button id="btnEditar" class="btn-edit hidden" onclick="salirModoSimplificado()">⚙️ Ver configuración</button>
-
-    <div id="heroCard" class="card hero-card">
-        <div class="hero-title">Enfoca el semáforo y sincroniza</div>
-        <div class="hero-sub">La app detecta los tiempos del ciclo y arranca el temporizador automáticamente</div>
-        <button class="btn-cam" onclick="window.location.href='automatico.html'">📷 Sincronizar con cámara</button>
-        <div class="hero-sub" style="margin:10px 0 0 0;">Puedes ajustar los tiempos manualmente aquí abajo</div>
-    </div>
-
-    <div id="setupCards">
-    <div class="card">
-        <div class="grid">
-            <div><label>Verde (s)</label><input type="number" id="tVerde" value="20"></div>
-            <div><label>Amarillo (s)</label><input type="number" id="tAmarillo" value="0"></div>
-            <div><label>Rojo (s)</label><input type="number" id="tRojo" value="35"></div>
-            <div><label>Flecha (s)</label><input type="number" id="tFlecha" value="15"></div>
-        </div>
-        <button class="btn-sync" onclick="sincronizar()">Sincronizar manual (empieza ahora)</button>
-    </div>
-
-    <div class="card">
-        <label>Orden de las señales (usa las flechas para reordenar)</label>
-        <div class="order-list" id="orderList"></div>
-    </div>
-    </div>
-
-    <div id="lightBox" class="light-display bg-off">
-        <div id="stateText" class="state-text">SIN SINCRONIZAR</div>
-        <div id="timerText" class="timer-text">--</div>
-    </div>
-
-    <button id="btnBajadaRapida" class="btn-bajada-rapida hidden" onclick="editarBajadaRapido()">
-        ⏱️ Bajada: <span id="bajadaActualLabel">--</span>s
-    </button>
-
-    <button id="btnPausar" class="btn-pausar hidden" onclick="pausarYVolver()">⏸️ Pausar</button>
-
-    <div id="debugPane" class="hidden"></div>
-
-    <div id="upcomingBox" class="upcoming">
-        <div class="upcoming-item">
-            <div class="u-label">Siguiente</div>
-            <div class="u-name" id="nextName">--</div>
-            <div class="u-dur" id="nextDur">--</div>
-        </div>
-        <div class="upcoming-item">
-            <div class="u-label">Después</div>
-            <div class="u-name" id="afterName">--</div>
-            <div class="u-dur" id="afterDur">--</div>
-        </div>
-    </div>
-
-    <div id="bajadaInputCard" class="card">
-        <div id="bajadaInputWrap">
-            <label>Tiempo de bajada (s) — desde tu posición hasta el semáforo</label>
-            <input type="number" id="tBajada" value="55" style="margin-top:6px;" oninput="actualizarBajadaLabel()">
-        </div>
-    </div>
-
-    <div id="graficoBajadaCard" class="card">
-        <div class="linear-wrap">
-            <div class="linear-bar" id="linearBar"></div>
-            <div class="safe-bar" id="safeBar"></div>
-            <div class="bar-caption">Franja superior: estado del semáforo · Franja inferior (rayada): momento seguro para empezar a bajar</div>
-        </div>
-        <div class="window-status" id="windowStatus">--</div>
-    </div>
-
-    <div id="configCard" class="card">
-        <label>Configuraciones guardadas (máx. 5)</label>
-        <input type="text" id="nombreConfig" placeholder="Nombre de la configuración" style="margin-top:6px;">
-        <div class="grid" style="margin-top:8px;">
-            <button class="btn-save-new" onclick="guardarNuevaConfig()">💾 Guardar como nueva</button>
-            <button class="btn-update" onclick="actualizarConfigSeleccionada()">✏️ Actualizar seleccionada</button>
-        </div>
-        <div class="config-list" id="configList"></div>
-        <div class="config-count" id="configCount"></div>
+    <!-- Inputs invisibles: aquí viven los tiempos (los alimenta la cámara) -->
+    <div style="display:none;">
+        <input id="tVerde" value="20">
+        <input id="tAmarillo" value="0">
+        <input id="tRojo" value="35">
+        <input id="tFlecha" value="15">
+        <input id="tBajada" value="55">
     </div>
 
     <script>
         let syncTime = localStorage.getItem('syncTime') ? parseInt(localStorage.getItem('syncTime')) : null;
-        let modoSimplificado = localStorage.getItem('modoSimplificado') === 'true';
-        let valoresBloqueados = localStorage.getItem('valoresBloqueados') === 'true';
-        let alertaDisparada = false; // evita repetir la alerta dentro de la misma ventana
-        let sincroScreenLocked = window.sincroScreenLocked === true;
+        let pausado = localStorage.getItem('pausado') === 'true';
+        let alertaDisparada = false;
 
         // ===== Sonido y vibración =====
         let sonidoActivado = localStorage.getItem('sonidoActivado') !== 'false';
@@ -400,9 +205,7 @@
                     audioCtx = null;
                 }
             }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             return audioCtx;
         }
 
@@ -425,13 +228,11 @@
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics) {
                 window.Capacitor.Plugins.Haptics.vibrate({ duration: duracionMs });
             } else if (navigator.vibrate) {
-                navigator.vibrate(duracionMs); // fallback si alguna vez se abre en un navegador normal
+                navigator.vibrate(duracionMs);
             }
         }
 
         function dispararAlerta() {
-            // Vibración que se intensifica (pulsos más largos hacia el final) y
-            // termina justo cuando comienza la ventana segura de bajada (~5000 ms en total)
             if (vibracionActivada) {
                 const pulsos = [
                     { delay: 0,    dur: 100 },
@@ -442,7 +243,6 @@
                 ];
                 pulsos.forEach(p => setTimeout(() => vibrarNativo(p.dur), p.delay));
             }
-            // Sonido que se intensifica en paralelo (más agudo y más largo hacia el final)
             if (sonidoActivado) {
                 const beeps = [
                     { delay: 0,    freq: 440, dur: 150,  vol: 0.15 },
@@ -455,19 +255,15 @@
             }
         }
 
-        function actualizarBotonesToggle() {
-            const btnSonido = document.getElementById('btnSonido');
-            const btnVibracion = document.getElementById('btnVibracion');
-            btnSonido.innerText = `🔊 Sonido: ${sonidoActivado ? 'ON' : 'OFF'}`;
-            btnSonido.classList.toggle('off', !sonidoActivado);
-            btnVibracion.innerText = `📳 Vibración: ${vibracionActivada ? 'ON' : 'OFF'}`;
-            btnVibracion.classList.toggle('off', !vibracionActivada);
+        // ===== Ajustes =====
+        function toggleAjustes() {
+            document.getElementById('ajustesCard').classList.toggle('hidden');
         }
 
         function toggleSonido() {
             sonidoActivado = !sonidoActivado;
             localStorage.setItem('sonidoActivado', sonidoActivado);
-            obtenerAudioCtx(); // aprovechar el gesto del usuario para desbloquear el audio
+            obtenerAudioCtx();
             actualizarBotonesToggle();
         }
 
@@ -477,366 +273,38 @@
             actualizarBotonesToggle();
         }
 
-        // ===== Tema (claro / oscuro) =====
-        let temaOscuro = localStorage.getItem('temaOscuro') !== 'false';
+        function actualizarBotonesToggle() {
+            const btnSonido = document.getElementById('btnSonido');
+            const btnVibracion = document.getElementById('btnVibracion');
+            btnSonido.innerText = `🔊 Sonido: ${sonidoActivado ? 'ON' : 'OFF'}`;
+            btnSonido.classList.toggle('off', !sonidoActivado);
+            btnVibracion.innerText = `📳 Vibración: ${vibracionActivada ? 'ON' : 'OFF'}`;
+            btnVibracion.classList.toggle('off', !vibracionActivada);
+        }
 
+        // ===== Tema =====
+        let temaOscuro = localStorage.getItem('temaOscuro') !== 'false';
         function aplicarTema() {
             document.body.classList.toggle('light', !temaOscuro);
             const btn = document.getElementById('btnTema');
             if (btn) btn.innerText = temaOscuro ? '🌙 Tema: Oscuro' : '☀️ Tema: Claro';
         }
-
         function alternarTema() {
             temaOscuro = !temaOscuro;
             localStorage.setItem('temaOscuro', temaOscuro);
+            const btn = document.getElementById('btnTema');
+            btn.innerText = temaOscuro ? '🌙 Tema: Oscuro' : '☀️ Tema: Claro';
             aplicarTema();
         }
 
-        // ===== Panel de herramientas (botón arriba a la izquierda) =====
-        function togglePanelHerramientas() {
-            document.getElementById('panelHerramientas').classList.toggle('hidden');
-        }
-
-        // ===== Cronómetro convencional =====
-        let cronoTiempoMs = 0;
-        let cronoIntervalo = null;
-        let cronoParcialesLista = [];
-
-        function cronoFormatear(ms) {
-            const mm = String(Math.floor(ms / 60000)).padStart(2, '0');
-            const ss = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
-            const cs = String(Math.floor((ms % 1000) / 10)).padStart(2, '0');
-            return `${mm}:${ss}.${cs}`;
-        }
-
-        function cronoActualizarDisplay() {
-            document.getElementById('cronoDisplay').innerText = cronoFormatear(cronoTiempoMs);
-        }
-
-        function cronoPrincipal() {
-            const btn = document.getElementById('btnCronoPrincipal');
-            if (cronoIntervalo) {
-                clearInterval(cronoIntervalo);
-                cronoIntervalo = null;
-                btn.innerText = '▶ Iniciar';
-                btn.style.background = '#00e676';
-                btn.style.color = '#000';
-            } else {
-                const inicio = performance.now() - cronoTiempoMs;
-                cronoIntervalo = setInterval(() => {
-                    cronoTiempoMs = performance.now() - inicio;
-                    cronoActualizarDisplay();
-                }, 25);
-                btn.innerText = '⏸ Pausar';
-                btn.style.background = '#fbc02d';
-                btn.style.color = '#000';
-            }
-        }
-
-        function cronoParcial() {
-            if (cronoTiempoMs === 0) return;
-            cronoParcialesLista.unshift(cronoTiempoMs);
-            const cont = document.getElementById('cronoParciales');
-            cont.innerHTML = '';
-            cronoParcialesLista.forEach((p, i) => {
-                const fila = document.createElement('div');
-                fila.className = 'crono-parcial';
-                fila.innerHTML = `<span class="cp-n">Parcial ${i + 1}</span><span class="cp-t">${cronoFormatear(p)}</span>`;
-                cont.appendChild(fila);
-            });
-            cronoActualizarDisplay();
-        }
-
-        function cronoReiniciar() {
-            if (cronoIntervalo) {
-                clearInterval(cronoIntervalo);
-                cronoIntervalo = null;
-            }
-            cronoTiempoMs = 0;
-            cronoParcialesLista = [];
-            document.getElementById('cronoParciales').innerHTML = '';
-            const btn = document.getElementById('btnCronoPrincipal');
-            btn.innerText = '▶ Iniciar';
-            btn.style.background = '#00e676';
-            btn.style.color = '#000';
-            cronoActualizarDisplay();
-        }
-
-        // ===== Velocidad · distancia → tiempo =====
-        // t = d / v  (v en km/h, d en km) → resultado en segundos
-        function calcularTiempo() {
-            const v = parseFloat(document.getElementById('velVelocidad').value);
-            const d = parseFloat(document.getElementById('velDistancia').value);
-            const salida = document.getElementById('velResult');
-            if (!v || !d || v <= 0) {
-                salida.innerText = 'Ingresa velocidad y distancia';
-                salida.style.color = '#ffb74d';
-                return;
-            }
-            const seg = (d / v) * 3600;
-            const texto = `${seg.toFixed(1)} s`;
-            const extra = seg >= 60 ? ` (${(seg / 60).toFixed(1)} min)` : '';
-            salida.innerText = texto + extra;
-            salida.style.color = 'var(--accent)';
-        }
-
-        // ===== Atajo de navegación =====
-        // Abre la app de navegación por defecto (Google Maps). En Android el
-        // enlace https de maps se resuelve a la app instalada.
-        function abrirNavegacion() {
-            window.location.href = 'https://www.google.com/maps';
-        }
-
-        // Configuración de cada fase: etiqueta, clase CSS, id del input de duración y color del punto
+        // ===== Configuración de fases =====
         const phasesConfig = {
             verde:     { label: 'VERDE',           className: 'bg-verde',     inputId: 'tVerde',     dot: '#388e3c' },
             amarillo:  { label: 'AMARILLO',        className: 'bg-amarillo',  inputId: 'tAmarillo',  dot: '#fbc02d' },
             rojo:      { label: 'ROJO',            className: 'bg-rojo',      inputId: 'tRojo',      dot: '#d32f2f' },
-            flecha:    { label: 'FLECHA VERDE ➔',  className: 'bg-flecha',    inputId: 'tFlecha',    dot: '#00897b' }
+            flecha:    { label: 'FLECHA',          className: 'bg-flecha',    inputId: 'tFlecha',    dot: '#00897b' }
         };
-
-        // Orden por defecto (configuración "10pm Viaducto": verde -> flecha -> amarillo -> rojo)
         let order = JSON.parse(localStorage.getItem('phaseOrder') || 'null') || ['verde', 'flecha', 'amarillo', 'rojo'];
-
-        function guardarOrden() {
-            localStorage.setItem('phaseOrder', JSON.stringify(order));
-        }
-
-        function moverFase(index, direccion) {
-            const nuevoIndex = index + direccion;
-            if (nuevoIndex < 0 || nuevoIndex >= order.length) return;
-            [order[index], order[nuevoIndex]] = [order[nuevoIndex], order[index]];
-            guardarOrden();
-            renderOrderList();
-        }
-
-        function renderOrderList() {
-            const container = document.getElementById('orderList');
-            container.innerHTML = '';
-            order.forEach((key, index) => {
-                const cfg = phasesConfig[key];
-                const row = document.createElement('div');
-                row.className = 'order-row';
-                row.innerHTML = `
-                    <span class="pos">${index + 1}</span>
-                    <span class="dot" style="background:${cfg.dot}"></span>
-                    <span class="name">${cfg.label}</span>
-                    <div class="arrows">
-                        <button onclick="moverFase(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
-                        <button onclick="moverFase(${index}, 1)" ${index === order.length - 1 ? 'disabled' : ''}>↓</button>
-                    </div>
-                `;
-                container.appendChild(row);
-            });
-        }
-
-        // ===== Bloqueo de la configuración mientras el contador está corriendo =====
-        // Una vez sincronizado, toda la configuración (colores, orden de señales,
-        // tiempo de bajada, configuraciones guardadas) queda bloqueada, aunque se
-        // entre a "Ver configuración". Solo se libera al presionar Pausa.
-        function actualizarBloqueoConfiguracion() {
-            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada', 'nombreConfig'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.disabled = valoresBloqueados;
-            });
-            document.getElementById('setupCards').classList.toggle('bloqueado-config', valoresBloqueados);
-            document.getElementById('configCard').classList.toggle('bloqueado-config', valoresBloqueados);
-            document.getElementById('btnPausar').classList.toggle('hidden', !valoresBloqueados);
-        }
-
-        function sincronizar() {
-            syncTime = Date.now();
-            localStorage.setItem('syncTime', syncTime);
-            modoSimplificado = true;
-            localStorage.setItem('modoSimplificado', 'true');
-            obtenerAudioCtx(); // aprovechar este gesto del usuario para desbloquear el audio
-            iniciarIntervalo();
-            valoresBloqueados = true;
-            localStorage.setItem('valoresBloqueados', 'true');
-            actualizarBloqueoConfiguracion();
-            actualizarVisibilidad();
-        }
-
-        function salirModoSimplificado() {
-            modoSimplificado = false;
-            localStorage.setItem('modoSimplificado', 'false');
-            actualizarVisibilidad();
-        }
-
-        // ===== Bloqueo de pantalla =====
-        // El estado lo marca la capa nativa (MainActivity): window.sincroScreenLocked.
-        // Mientras el móvil esté bloqueado se muestra la vista simple (luces +
-        // temporizador) y la capa nativa descarta los toques: la única acción
-        // posible es desbloquear el teléfono.
-        function actualizarEstadoBloqueo() {
-            if (window.sincroScreenLocked !== undefined) {
-                sincroScreenLocked = window.sincroScreenLocked;
-            }
-            document.body.classList.toggle('bloqueado', sincroScreenLocked);
-        }
-
-        function actualizarVisibilidad() {
-            document.getElementById('setupCards').classList.toggle('hidden', modoSimplificado);
-            document.getElementById('heroCard').classList.toggle('hidden', modoSimplificado);
-            document.getElementById('upcomingBox').classList.toggle('hidden', modoSimplificado);
-            document.getElementById('bajadaInputCard').classList.toggle('hidden', modoSimplificado);
-            document.getElementById('configCard').classList.toggle('hidden', modoSimplificado);
-            document.getElementById('btnEditar').classList.toggle('hidden', !modoSimplificado);
-            document.getElementById('btnBajadaRapida').classList.toggle('hidden', !modoSimplificado);
-        }
-
-        // ===== Pausa (vista simple) =====
-        // Detiene por completo el contador (deja de recalcular el estado del
-        // semáforo) y regresa a la pantalla de configuración.
-        let intervaloSemaforo = null;
-
-        function iniciarIntervalo() {
-            if (!intervaloSemaforo) {
-                intervaloSemaforo = setInterval(actualizarSemaforo, 200);
-            }
-        }
-
-        function detenerIntervalo() {
-            if (intervaloSemaforo) {
-                clearInterval(intervaloSemaforo);
-                intervaloSemaforo = null;
-            }
-        }
-
-        function pausarYVolver() {
-            detenerIntervalo();
-            valoresBloqueados = false;
-            localStorage.setItem('valoresBloqueados', 'false');
-            actualizarBloqueoConfiguracion();
-            salirModoSimplificado();
-        }
-
-        // ===== Acceso rápido al tiempo de bajada (modo simplificado) =====
-        function editarBajadaRapido() {
-            const actual = document.getElementById('tBajada').value;
-            const nuevo = prompt('Nuevo tiempo de bajada (segundos):', actual);
-            if (nuevo !== null && nuevo.trim() !== '' && !isNaN(nuevo)) {
-                document.getElementById('tBajada').value = nuevo;
-                actualizarBajadaLabel();
-                guardarParametros();
-            }
-        }
-
-        function actualizarBajadaLabel() {
-            document.getElementById('bajadaActualLabel').innerText = document.getElementById('tBajada').value;
-        }
-
-        // ===== Persistencia de parámetros =====
-        // Al volver del lock screen la WebView puede recargarse; sin guardar los
-        // valores, los inputs volverían a los valores por defecto del HTML. Así
-        // se conserva la configuración ingresada (verde/amarillo/rojo/flecha/bajada).
-        let ultimaLecturaParams = null;
-        function guardarParametros() {
-            const params = {};
-            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
-                params[id] = document.getElementById(id).value;
-            });
-            localStorage.setItem('parametrosApp', JSON.stringify(params));
-            try {
-                localStorage.setItem('configActualIdApp', configActualId || '');
-            } catch (e) { }
-        }
-
-        function restaurarParametros() {
-            const params = JSON.parse(localStorage.getItem('parametrosApp') || 'null');
-            ultimaLecturaParams = localStorage.getItem('parametrosApp') || '(vacío)';
-            if (!params || typeof params !== 'object') return false;
-            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
-                const valor = params[id];
-                if (valor !== undefined && valor !== null && valor !== '') {
-                    document.getElementById(id).value = valor;
-                }
-            });
-            const activa = localStorage.getItem('configActualIdApp');
-            if (activa) configActualId = activa;
-            actualizarBajadaLabel();
-            renderConfigList();
-            return true;
-        }
-
-        function vincularGuardadoParametros() {
-            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.addEventListener('input', guardarParametros);
-                el.addEventListener('change', guardarParametros);
-            });
-            // Al pasar la app a segundo plano (volver a pantalla de bloqueo)
-            // se fuerza el guardado por si el proceso termina estando bloqueada.
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) guardarParametros();
-            });
-            window.addEventListener('pagehide', guardarParametros);
-        }
-
-        // ===== Diagnóstico de arranque =====
-        // Registra en localStorage qué hizo la app al cargar para detectar si la
-        // página se recarga al volver del lock screen y si los valores se restauran.
-        function registrarDiagnostico() {
-            try {
-                const lista = JSON.parse(localStorage.getItem('debugBootLog') || '[]');
-                const n = (parseInt(localStorage.getItem('debugBootCount')) || 0) + 1;
-                localStorage.setItem('debugBootCount', String(n));
-                lista.push({
-                    n,
-                    ts: new Date().toISOString(),
-                    paramsStored: localStorage.getItem('parametrosApp'),
-                    storagePrevtoRestore: ultimaLecturaParams,
-                    configActual: localStorage.getItem('configActualIdApp'),
-                    valuesTrasRestaurar: {
-                        verde: document.getElementById('tVerde').value,
-                        amarillo: document.getElementById('tAmarillo').value,
-                        rojo: document.getElementById('tRojo').value,
-                        flecha: document.getElementById('tFlecha').value,
-                        bajada: document.getElementById('tBajada').value
-                    },
-                    sync: syncTime,
-                    modo: localStorage.getItem('modoSimplificado'),
-                    bloqueado: valoresBloqueados
-                });
-                if (lista.length > 15) lista.splice(0, lista.length - 15);
-                localStorage.setItem('debugBootLog', JSON.stringify(lista));
-            } catch (e) { }
-        }
-
-        function verDiagnostico() {
-            const pane = document.getElementById('debugPane');
-            if (pane.classList.contains('hidden')) {
-                const log = JSON.parse(localStorage.getItem('debugBootLog') || '[]');
-                pane.innerText = 'ARRÁSTRALO HACIA ABAJO PARA CERRAR\n\n' + JSON.stringify(log, null, 1);
-                pane.classList.remove('hidden');
-            } else {
-                pane.classList.add('hidden');
-            }
-        }
-
-        // Mantener presionado el título abre el diagnóstico (toque en el panel lo cierra)
-        (function vincularDiag() {
-            const titulo = document.querySelector('h2');
-            const pane = document.getElementById('debugPane');
-            if (!titulo || !pane) return;
-            let pressTimer = null;
-            titulo.addEventListener('pointerdown', () => {
-                pressTimer = setTimeout(verDiagnostico, 600);
-            });
-            titulo.addEventListener('pointerup', () => clearTimeout(pressTimer));
-            titulo.addEventListener('pointerleave', () => clearTimeout(pressTimer));
-            // Un toque sobre el panel lo oculta (arrastrar hacia abajo > 80px también)
-            let y0 = 0;
-            pane.addEventListener('pointerdown', (e) => { y0 = e.clientY; });
-            pane.addEventListener('pointerup', (e) => {
-                if (e.clientY - y0 > 80) {
-                    pane.classList.add('hidden');
-                } else if (e.clientY === y0) {
-                    pane.classList.add('hidden');
-                }
-            });
-        })();
 
         function obtenerDuraciones() {
             const duraciones = {};
@@ -850,8 +318,37 @@
             return Math.round(ms / 1000) + 's';
         }
 
+        // ===== Motor del semáforo =====
+        let intervaloSemaforo = null;
+
+        function iniciarIntervalo() {
+            if (!intervaloSemaforo) intervaloSemaforo = setInterval(actualizarSemaforo, 200);
+        }
+
+        function detenerIntervalo() {
+            if (intervaloSemaforo) {
+                clearInterval(intervaloSemaforo);
+                intervaloSemaforo = null;
+            }
+        }
+
+        function pausarYVolver() {
+            detenerIntervalo();
+            pausado = true;
+            localStorage.setItem('pausado', 'true');
+            aplicarVista();
+        }
+
+        function renderOrderChips(duraciones, faseActualIdx) {
+            const cont = document.getElementById('orderChips');
+            cont.innerHTML = order.map((key, i) => {
+                const dur = formatearSegundos(duraciones[key]);
+                const cls = i === faseActualIdx ? 'chip active' : 'chip';
+                return `<span class="${cls}" style="background:${phasesConfig[key].dot}">${phasesConfig[key].label} ${dur}</span>`;
+            }).join('');
+        }
+
         function actualizarSemaforo() {
-            actualizarEstadoBloqueo();
             const duraciones = obtenerDuraciones();
             const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
 
@@ -878,21 +375,16 @@
                     break;
                 }
             }
-
             if (faseActualIdx === -1) return;
 
-            // Próximas dos fases (con wrap-around del ciclo)
+            renderOrderChips(duraciones, faseActualIdx);
+
             const siguienteIdx = (faseActualIdx + 1) % order.length;
             const despuesIdx = (faseActualIdx + 2) % order.length;
-
-            const siguienteKey = order[siguienteIdx];
-            const despuesKey = order[despuesIdx];
-
-            document.getElementById('nextName').innerText = phasesConfig[siguienteKey].label;
-            document.getElementById('nextDur').innerText = formatearSegundos(duraciones[siguienteKey]);
-
-            document.getElementById('afterName').innerText = phasesConfig[despuesKey].label;
-            document.getElementById('afterDur').innerText = formatearSegundos(duraciones[despuesKey]);
+            document.getElementById('nextName').innerText = phasesConfig[order[siguienteIdx]].label;
+            document.getElementById('nextDur').innerText = formatearSegundos(duraciones[order[siguienteIdx]]);
+            document.getElementById('afterName').innerText = phasesConfig[order[despuesIdx]].label;
+            document.getElementById('afterDur').innerText = formatearSegundos(duraciones[order[despuesIdx]]);
 
             actualizarTemporizadorLineal(duraciones, duracionCiclo, tiempoTranscurrido);
         }
@@ -904,17 +396,15 @@
 
             const tiempoBajada = (parseInt(document.getElementById('tBajada').value) || 0) * 1000;
 
-            // 1. Dibujar los segmentos de color de la fase (estado del semáforo en cada instante)
             let acumulado = 0;
             let barHtml = '';
-            const intervalosFase = []; // {key, start, end}
+            const intervalosFase = [];
 
             order.forEach((key) => {
-                const dur = duraciones[key];
                 const start = acumulado;
-                const end = acumulado + dur;
+                const end = acumulado + duraciones[key];
                 const leftPct = (start / duracionCiclo) * 100;
-                const widthPct = (dur / duracionCiclo) * 100;
+                const widthPct = (duraciones[key] / duracionCiclo) * 100;
                 barHtml += `<div class="segment ${phasesConfig[key].className}" style="left:${leftPct}%; width:${widthPct}%;"></div>`;
                 intervalosFase.push({ key, start, end });
                 acumulado = end;
@@ -924,15 +414,12 @@
             barHtml += `<div class="playhead" style="left:${playheadPct}%;"></div>`;
             bar.innerHTML = barHtml;
 
-            // 2. Intervalos "seguros" de llegada = fases verde y flecha
             const intervalosSeguros = intervalosFase.filter(f => f.key === 'verde' || f.key === 'flecha');
 
-            // 3. Convertir cada intervalo seguro de LLEGADA en una ventana de SALIDA (restando el tiempo de bajada)
             function desplazar(start, end) {
                 let s = ((start - tiempoBajada) % duracionCiclo + duracionCiclo) % duracionCiclo;
                 let e = ((end - tiempoBajada) % duracionCiclo + duracionCiclo) % duracionCiclo;
                 if (s <= e) return [[s, e]];
-                // Si la resta cruza el inicio del ciclo, se parte en dos tramos
                 return [[s, duracionCiclo], [0, e]];
             }
 
@@ -941,7 +428,6 @@
                 ventanasSalida = ventanasSalida.concat(desplazar(start, end));
             });
 
-            // 4. Dibujar las ventanas de salida en la franja inferior
             let safeHtml = '';
             ventanasSalida.forEach(([s, e]) => {
                 const leftPct = (s / duracionCiclo) * 100;
@@ -951,16 +437,13 @@
             safeHtml += `<div class="playhead" style="left:${playheadPct}%;"></div>`;
             safeBar.innerHTML = safeHtml;
 
-            // 5. ¿Es AHORA un buen momento para bajar?
             const enVentana = ventanasSalida.find(([s, e]) => tiempoTranscurrido >= s && tiempoTranscurrido < e);
 
             if (enVentana) {
                 const segundosRestantes = Math.ceil((enVentana[1] - tiempoTranscurrido) / 1000);
-                status.className = 'window-status window-ok';
-                status.innerText = `🟢 ¡BAJA AHORA! Tienes ${segundosRestantes}s más para salir y llegar con luz segura.`;
-                alertaDisparada = false; // dentro de la ventana: rearmar para la próxima vuelta del ciclo
+                status.innerText = `¡BAJA AHORA! ${segundosRestantes}s`;
+                alertaDisparada = false;
             } else {
-                // Buscar el inicio de la próxima ventana (la más cercana hacia adelante, con wrap-around)
                 let mejorEspera = null;
                 ventanasSalida.forEach(([s]) => {
                     let espera = s - tiempoTranscurrido;
@@ -968,10 +451,7 @@
                     if (mejorEspera === null || espera < mejorEspera) mejorEspera = espera;
                 });
                 const segundosEspera = mejorEspera !== null ? Math.ceil(mejorEspera / 1000) : '--';
-                status.className = 'window-status window-warn';
-                status.innerText = `🔴 Todavía no bajes. Espera ${segundosEspera}s para salir y llegar con luz segura.`;
-
-                // Disparar la alerta (vibración + sonido, si están activados) 5s antes de la ventana
+                status.innerText = `Espera ${segundosEspera}s para bajar`;
                 if (mejorEspera !== null && mejorEspera <= 5000 && !alertaDisparada) {
                     alertaDisparada = true;
                     dispararAlerta();
@@ -979,182 +459,101 @@
             }
         }
 
-        renderOrderList();
-
-        // ===== Configuraciones guardadas =====
-        const MAX_CONFIGS = 5;
-        let configs = JSON.parse(localStorage.getItem('configuraciones') || '[]');
-        let configActualId = null;
-
-        // Configuración de fábrica "10pm Viaducto" (se agrega la primera vez si no existe)
-        let seedConfigPendiente = false;
-        if (!configs.some(c => c.nombre === '10pm Viaducto') && configs.length < MAX_CONFIGS) {
-            const seed = {
-                id: 'default-10pm-viaducto',
-                nombre: '10pm Viaducto',
-                tVerde: '20',
-                tAmarillo: '0',
-                tRojo: '35',
-                tFlecha: '15',
-                tBajada: document.getElementById('tBajada').value || '55',
-                order: ['verde', 'flecha', 'amarillo', 'rojo']
-            };
-            configs.push(seed);
-            guardarConfigs();
-            configActualId = seed.id;
-            seedConfigPendiente = true;
+        // ===== Bajada (stepper grande) =====
+        function actualizarBajadaLabel() {
+            document.getElementById('bajadaVal').innerText = document.getElementById('tBajada').value;
         }
 
-        function guardarConfigs() {
-            localStorage.setItem('configuraciones', JSON.stringify(configs));
-        }
-
-        function leerConfigActualDesdeInputs() {
-            return {
-                tVerde: document.getElementById('tVerde').value,
-                tAmarillo: document.getElementById('tAmarillo').value,
-                tRojo: document.getElementById('tRojo').value,
-                tFlecha: document.getElementById('tFlecha').value,
-                tBajada: document.getElementById('tBajada').value,
-                order: [...order]
-            };
-        }
-
-        function aplicarConfigAInputs(cfg) {
-            document.getElementById('tVerde').value = cfg.tVerde;
-            document.getElementById('tAmarillo').value = cfg.tAmarillo;
-            document.getElementById('tRojo').value = cfg.tRojo;
-            document.getElementById('tFlecha').value = cfg.tFlecha;
-            document.getElementById('tBajada').value = cfg.tBajada;
-            order = [...cfg.order];
-            guardarOrden();
-            renderOrderList();
+        function cambiarBajada(delta) {
+            const input = document.getElementById('tBajada');
+            let v = (parseInt(input.value) || 0) + delta;
+            if (v < 1) v = 1;
+            if (v > 300) v = 300;
+            input.value = v;
             actualizarBajadaLabel();
-
+            guardarParametros();
             const duraciones = obtenerDuraciones();
             const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
-            if (duracionCiclo > 0) actualizarTemporizadorLineal(duraciones, duracionCiclo, 0);
-            guardarParametros();
-        }
-
-        function guardarNuevaConfig() {
-            const nombre = document.getElementById('nombreConfig').value.trim();
-            if (!nombre) {
-                alert('Escribe un nombre para la configuración.');
-                return;
+            if (syncTime && duracionCiclo > 0) {
+                actualizarTemporizadorLineal(duraciones, duracionCiclo, (Date.now() - syncTime) % duracionCiclo);
             }
-            if (configs.length >= MAX_CONFIGS) {
-                alert(`Ya tienes ${MAX_CONFIGS} configuraciones guardadas. Elimina una o usa "Actualizar seleccionada" para sobrescribir.`);
-                return;
+        }
+
+        // ===== Persistencia =====
+        function guardarParametros() {
+            const params = {};
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                params[id] = document.getElementById(id).value;
+            });
+            localStorage.setItem('parametrosApp', JSON.stringify(params));
+        }
+
+        function restaurarParametros() {
+            const params = JSON.parse(localStorage.getItem('parametrosApp') || 'null');
+            if (!params || typeof params !== 'object') return false;
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                const valor = params[id];
+                if (valor !== undefined && valor !== null && valor !== '') {
+                    document.getElementById(id).value = valor;
+                }
+            });
+            actualizarBajadaLabel();
+            return true;
+        }
+
+        function vincularGuardadoParametros() {
+            ['tVerde', 'tAmarillo', 'tRojo', 'tFlecha', 'tBajada'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', guardarParametros);
+                el.addEventListener('change', guardarParametros);
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) guardarParametros();
+            });
+            window.addEventListener('pagehide', guardarParametros);
+        }
+
+        // ===== Lockscreen (marca la capa nativa) =====
+        function actualizarEstadoBloqueo() {
+            if (window.sincroScreenLocked !== undefined) {
+                document.body.classList.toggle('bloqueado', window.sincroScreenLocked);
             }
-            const nueva = { id: Date.now().toString(), nombre, ...leerConfigActualDesdeInputs() };
-            configs.push(nueva);
-            guardarConfigs();
-            configActualId = nueva.id;
-            renderConfigList();
         }
 
-        function actualizarConfigSeleccionada() {
-            if (!configActualId) {
-                alert('Primero carga (o guarda como nueva) una configuración para poder actualizarla.');
-                return;
-            }
-            const idx = configs.findIndex(c => c.id === configActualId);
-            if (idx === -1) return;
-            const nombre = document.getElementById('nombreConfig').value.trim() || configs[idx].nombre;
-            configs[idx] = { id: configActualId, nombre, ...leerConfigActualDesdeInputs() };
-            guardarConfigs();
-            renderConfigList();
+        // ===== Vista: crono activa o home =====
+        function aplicarVista() {
+            const activo = syncTime && !pausado;
+            document.getElementById('homeView').classList.toggle('hidden', activo);
+            document.getElementById('cronoView').classList.toggle('hidden', !activo);
         }
 
-        function cargarConfig(id) {
-            const cfg = configs.find(c => c.id === id);
-            if (!cfg) return;
-            aplicarConfigAInputs(cfg);
-            configActualId = id;
-            document.getElementById('nombreConfig').value = cfg.nombre;
-            renderConfigList();
-        }
-
-        function eliminarConfig(id) {
-            if (!confirm('¿Eliminar esta configuración?')) return;
-            configs = configs.filter(c => c.id !== id);
-            guardarConfigs();
-            if (configActualId === id) {
-                configActualId = null;
-                document.getElementById('nombreConfig').value = '';
-            }
-            renderConfigList();
-        }
-
-        function renderConfigList() {
-            const container = document.getElementById('configList');
-            const count = document.getElementById('configCount');
-            container.innerHTML = '';
-
-            if (configs.length === 0) {
-                container.innerHTML = '<div class="config-empty">Aún no tienes configuraciones guardadas.</div>';
-            } else {
-                configs.forEach((cfg) => {
-                    const row = document.createElement('div');
-                    row.className = 'config-row' + (cfg.id === configActualId ? ' active' : '');
-                    row.innerHTML = `
-                        <span class="c-name">${cfg.nombre}</span>
-                        <div class="c-btns">
-                            <button class="btn-load" onclick="cargarConfig('${cfg.id}')">Cargar</button>
-                            <button class="btn-delete" onclick="eliminarConfig('${cfg.id}')">Eliminar</button>
-                        </div>
-                    `;
-                    container.appendChild(row);
-                });
-            }
-
-            count.innerText = `${configs.length}/${MAX_CONFIGS} configuraciones guardadas`;
-        }
-
-        renderConfigList();
-
-        // Si se acaba de sembrar "10pm Viaducto", aplícala a los inputs
-        if (seedConfigPendiente) {
-            cargarConfig(configActualId);
-        }
-
-        // Restaura la configuración persistida ANTES de dibujar la barra y
-        // guarda cualquier cambio futuro en el lock screen.
+        // ===== Inicio =====
         restaurarParametros();
         vincularGuardadoParametros();
         guardarParametros();
+        actualizarBotonesToggle();
+        aplicarTema();
+        actualizarBajadaLabel();
 
-        // Diagnóstico: registra este arranque (reload tras lock screen vs carga inicial)
-        registrarDiagnostico();
+        if (syncTime && !pausado) {
+            aplicarVista();
+            iniciarIntervalo();
+        } else {
+            aplicarVista();
+        }
 
-        // ===== Manejo del botón "atrás" físico de Android =====
-        // Con solo dos vistas posibles (configuración vs modo simplificado):
-        // - en modo simplificado, "atrás" muestra la configuración
-        // - en la vista de configuración, "atrás" cierra la app
+        // Botón "atrás" físico: en crono -> pausa; en home -> sale
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
             window.Capacitor.Plugins.App.addListener('backButton', () => {
-                if (modoSimplificado) {
-                    salirModoSimplificado();
+                if (syncTime && !pausado) {
+                    pausarYVolver();
                 } else {
                     window.Capacitor.Plugins.App.exitApp();
                 }
             });
         }
 
-        // Dibuja la barra una primera vez aunque aún no se haya sincronizado
-        (function inicializarBarra() {
-            const duraciones = obtenerDuraciones();
-            const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
-            if (duracionCiclo > 0) actualizarTemporizadorLineal(duraciones, duracionCiclo, 0);
-        })();
-
-        iniciarIntervalo();
-        actualizarVisibilidad();
-        actualizarBloqueoConfiguracion();
-        actualizarBotonesToggle();
-        aplicarTema();
-        actualizarBajadaLabel();
         actualizarEstadoBloqueo();
     </script>
 </body>
