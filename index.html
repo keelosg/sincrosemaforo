@@ -111,6 +111,17 @@
         body.bloqueado #lightBox { padding-bottom: 40px; }
         body.bloqueado .timer-text { font-size: 9em; }
         body.bloqueado #cronoTop { justify-content: flex-end; }
+
+        /* ===== Pantalla emergente de instrucciones ===== */
+        #instrModal { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.78); display: none; align-items: center; justify-content: center; padding: 24px; }
+        #instrModal.visible { display: flex; }
+        .instr-card { background: var(--card-bg); border-radius: 18px; padding: 24px 20px; max-width: 420px; width: 100%; text-align: left; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+        .instr-card h2 { margin: 0 0 14px; font-size: 1.3em; text-align: center; }
+        .instr-card ol { margin: 0 0 18px; padding-left: 20px; }
+        .instr-card li { font-size: 0.95em; line-height: 1.55; margin-bottom: 10px; color: var(--text); }
+        .instr-card li b { color: var(--accent); }
+        .btn-entendido { width: 100%; padding: 16px; font-size: 1.05em; border-radius: 12px; background: #00897b; color: #fff; }
+        .btn-saltar { background: transparent; color: var(--dim); font-size: 0.85em; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -122,7 +133,7 @@
             <h1>SincroSemáforo</h1>
             <p class="tagline">Enfoca, mide y corre</p>
         </div>
-        <button id="btnCam" onclick="window.location.href='automatico.html'">📷 Enfocar semáforo</button>
+        <button id="btnCam" onclick="mostrarInstrucciones()">📷 Enfocar semáforo</button>
         <p class="hint">Mantén la cámara apuntando al semáforo una vuelta completa.
         Cuando cambie el VERDE, la app arranca sola con tus tiempos.</p>
         <button class="btn-ajustes" onclick="toggleAjustes()">⚙ Ajustes</button>
@@ -175,6 +186,22 @@
                 <div class="linear-bar" id="linearBar"></div>
                 <div class="safe-bar" id="safeBar"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Pantalla emergente: instrucciones de sincronización -->
+    <div id="instrModal">
+        <div class="instr-card">
+            <h2>📷 Cómo sincronizar</h2>
+            <ol>
+                <li>Apunta el teléfono al semáforo, <b>a la altura de la luz</b>.</li>
+                <li>Mete la luz dentro del <b>recuadro grande</b> que aparece en la cámara.</li>
+                <li>Si se ve chica, toca <b>+</b> para acercar (zoom automático: solo espera).</li>
+                <li>Mantén quieto hasta que diga <b>ESTABLE</b>.</li>
+                <li>La app mide un ciclo completo (VERDE → AMARILLO → ROJO) y se <b>sincroniza sola</b> cuando cambia el VERDE.</li>
+            </ol>
+            <button class="btn-entendido" onclick="abrirCamara()">Entendido, abrir cámara</button>
+            <button class="btn-saltar" onclick="cerrarInstrucciones()">Cerrar</button>
         </div>
     </div>
 
@@ -526,6 +553,20 @@
             const activo = syncTime && !pausado;
             document.getElementById('homeView').classList.toggle('hidden', activo);
             document.getElementById('cronoView').classList.toggle('hidden', !activo);
+        }
+
+        // ===== Instrucciones (pantalla emergente) =====
+        function mostrarInstrucciones() {
+            document.getElementById('instrModal').classList.add('visible');
+        }
+
+        function cerrarInstrucciones() {
+            document.getElementById('instrModal').classList.remove('visible');
+        }
+
+        function abrirCamara() {
+            cerrarInstrucciones();
+            window.location.href = 'automatico.html';
         }
 
         // ===== Inicio =====

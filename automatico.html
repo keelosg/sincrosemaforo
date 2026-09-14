@@ -123,6 +123,7 @@
     const TAMANO_HISTORIAL = 8;
     let faseConfirmadaActual = null;
     let ultimoGlitch = 0;
+    let ultimaDeteccion = 0;
 
     // Zoom nativo de la cámara (si el dispositivo lo soporta)
     let trackZoom = null;
@@ -173,10 +174,10 @@
     // centrada: basta con que los píxeles iluminados de un color superen a los
     // de los otros dentro del recuadro.
     const HUES = [
-        { key: 'rojo',     min: 330, max: 360 },
-        { key: 'rojo',     min: 0,   max: 15 },
-        { key: 'amarillo', min: 25,  max: 70 },
-        { key: 'verde',    min: 75,  max: 170 }
+        { key: 'rojo',     min: 323, max: 360 },
+        { key: 'rojo',     min: 0,   max: 14 },
+        { key: 'amarillo', min: 15,  max: 68 },
+        { key: 'verde',    min: 72,  max: 185 }
     ];
 
     function clasificarPixeles(sctx, x, y, w, h) {
@@ -190,7 +191,7 @@
         let lit = 0;
         for (let i = 0; i < data.length; i += 8) {
             const hsv = rgbToHsv(data[i], data[i + 1], data[i + 2]);
-            if (hsv.s >= 0.30 && hsv.v >= 0.30) {
+            if (hsv.s >= 0.25 && hsv.v >= 0.25) {
                 lit++;
                 const hh = (hsv.h + 360) % 360;
                 for (const b of HUES) {
@@ -334,6 +335,7 @@
             cicloCerrado = false;
             historialDuraciones = {};
             conteoFin = {};
+            ultimaDeteccion = Date.now();
             actualizarMedidas();
             appState = 'calibrando';
 
@@ -428,13 +430,18 @@
         autoAcercar(analisis.lit, z.w * z.h);
 
         const chipEstable = document.getElementById('chipEstable');
-        chipEstable.innerText = faseConfirmadaActual
-            ? `🟢 ${faseConfirmadaActual.toUpperCase()} · Estable`
-            : (appState === 'calibrando' ? '🟠 Buscando semáforo…' : '🟡 Casi listo…');
+        if (faseConfirmadaActual) {
+            chipEstable.innerText = `🟢 ${faseConfirmadaActual.toUpperCase()} · Estable`;
+        } else if (appState === 'calibrando' && Date.now() - ultimaDeteccion > 4000) {
+            chipEstable.innerText = '🟠 ¿No se ve la luz? Acerca el teléfono o toca +';
+        } else {
+            chipEstable.innerText = appState === 'calibrando' ? '🟠 Buscando semáforo…' : '🟡 Casi listo…';
+        }
 
-        const faseDetectada = fasePorConteo(analisis.cnt, 4);
+        const faseDetectada = fasePorConteo(analisis.cnt, 2);
 
         if (faseDetectada) {
+            ultimaDeteccion = Date.now();
             historialFase.push(faseDetectada);
             if (historialFase.length > TAMANO_HISTORIAL) historialFase.shift();
         } else {
