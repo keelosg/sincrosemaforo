@@ -11,7 +11,7 @@
 
     /* ===== Zona superior: cámara, ocupa el espacio restante (~2/3) ===== */
     .camara-zone { flex: 2 1 0; min-height: 0; position: relative; background: #000; }
-    .video-wrap { position: relative; width: 100%; height: 100%; }
+    .video-wrap { position: relative; width: 100%; height: 100%; overflow: hidden; }
     video { width: 100%; height: 100%; object-fit: cover; display: block; }
     canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     h2 { position: absolute; top: 8px; left: 56px; right: 12px; margin: 0; font-size: 0.95em; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
@@ -66,7 +66,7 @@
     </div>
     <button class="btn-atras" onclick="window.location.href='index.html'">‹</button>
     <h2>🔵 Calibración: apunta y espera</h2>
-    <div class="sub">Mantén la luz encendida dentro de su franja · usa + para acercar</div>
+    <div class="sub">Mete la luz del semáforo dentro del recuadro (no hace falta exactitud)</div>
     <div class="zoom-btns" id="zoomBtns">
         <button class="zoom-btn" onclick="cambiarZoom(1)">+</button>
         <div class="zoom-nivel" id="zoomNivel">×1.0</div>
@@ -151,10 +151,6 @@
 
     const eventLog = [];
 
-    // Umbrales de "encendido" por zona (independientes del hue: solo brillo+saturación)
-    const UMBRAL_SAT = 0.30;
-    const UMBRAL_VAL = 0.30;
-
     function rgbToHsv(r, g, b) {
         r /= 255; g /= 255; b /= 255;
         const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -172,41 +168,45 @@
         return { h, s, v };
     }
 
-    // Muestreo por CONTEO de píxeles encendidos (no por promedio).
-    // A 4 m de distancia la luz ocupa pocos píxeles: el promedio se diluye con
-    // el fondo y nunca pasa el umbral. Contando píxeles saturados la luz se
-    // detecta aunque sea diminuta.
-    function muestrearBanda(sctx, x, y, w, h) {
+    // Clasificación por COLOR (hue), no por posición. Un solo recuadro grande
+    // detecta la luz del semáforo aunque esté chica (4 m) y aunque no quede
+    // centrada: basta con que los píxeles iluminados de un color superen a los
+    // de los otros dentro del recuadro.
+    const HUES = [
+        { key: 'rojo',     min: 330, max: 360 },
+        { key: 'rojo',     min: 0,   max: 15 },
+        { key: 'amarillo', min: 25,  max: 70 },
+        { key: 'verde',    min: 75,  max: 170 }
+    ];
+
+    function clasificarPixeles(sctx, x, y, w, h) {
         let data;
         try {
             data = sctx.getImageData(x, y, w, h).data;
         } catch (e) {
-            return { lit: 0, maxS: 0, maxV: 0 };
+            return { cnt: { rojo: 0, amarillo: 0, verde: 0 }, lit: 0 };
         }
-        let lit = 0, maxS = 0, maxV = 0;
+        const cnt = { rojo: 0, amarillo: 0, verde: 0 };
+        let lit = 0;
         for (let i = 0; i < data.length; i += 8) {
             const hsv = rgbToHsv(data[i], data[i + 1], data[i + 2]);
-            if (hsv.s > maxS) maxS = hsv.s;
-            if (hsv.v > maxV) maxV = hsv.v;
-            if (hsv.s >= 0.30 && hsv.v >= 0.30) lit++;
+            if (hsv.s >= 0.30 && hsv.v >= 0.30) {
+                lit++;
+                const hh = (hsv.h + 360) % 360;
+                for (const b of HUES) {
+                    if (hh >= b.min && hh < b.max) { cnt[b.key]++; break; }
+                }
+            }
         }
-        return { lit, maxS, maxV };
+        return { cnt, lit };
     }
 
-    // Una franja está "encendida" si hay suficientes píxeles saturados (luz
-    // grande) O si algún píxel es muy saturado y brillante (luz pequeña/lejana).
-    function bandaEncendida(m, w, h) {
-        const minLit = Math.max(10, (w * h) * 0.006);
-        return m.lit >= minLit || (m.maxS >= 0.45 && m.maxV >= 0.55);
-    }
-
-    // Regla de bucket: si rojo encendido -> 'rojo'. Si verde encendido y amarillo apagado -> 'verde'.
-    // Cualquier otra combinación (amarillo solo, verde+amarillo superpuestos, o ambos apagados) -> 'amarillo'
-    // (tramo de advertencia/transición, ya excluido de la ventana segura en tu app).
-    function calcularFase(rojoOn, amarilloOn, verdeOn) {
-        if (rojoOn) return 'rojo';
-        if (verdeOn && !amarilloOn) return 'verde';
-        return 'amarillo';
+    // Fase del semáforo = color con más píxeles encendidos (si hay suficientes).
+    function fasePorConteo(cnt, minimo) {
+        const total = cnt.rojo + cnt.amarillo + cnt.verde;
+        if (total < minimo) return null;
+        if (cnt.rojo >= cnt.amarillo) return cnt.rojo >= cnt.verde ? 'rojo' : 'verde';
+        return cnt.amarillo >= cnt.verde ? 'amarillo' : 'verde';
     }
 
     function agregarLog(mensaje) {
@@ -233,41 +233,64 @@
     }
 
     // ===== Zoom =====
+    // Si el dispositivo no tiene zoom óptico, se usa un ZOOM DE PANTALLA: la
+    // previsualización se agranda con CSS para encuadrar fácil, sin alterar la
+    // medición (que siempre muestra la imagen completa de la cámara).
+    function aplicarZoomVista() {
+        const z = 'scale(' + zoomActual + ')';
+        video.style.transform = z;
+        overlay.style.transform = z;
+        actualizarNivelZoom();
+    }
+
     function cambiarZoom(dir) {
-        if (!trackZoom) return;
-        const paso = dir > 0 ? zoomPaso : -zoomPaso;
-        const nv = Math.min(zoomMax, Math.max(zoomMin, zoomActual + paso));
-        trackZoom.applyConstraints({ advanced: [{ zoom: nv }] }).then(() => {
-            zoomActual = nv;
-            actualizarNivelZoom();
-        }).catch(() => {});
+        if (trackZoom) {
+            const paso = dir > 0 ? zoomPaso : -zoomPaso;
+            const nv = Math.min(zoomMax, Math.max(zoomMin, zoomActual + paso));
+            trackZoom.applyConstraints({ advanced: [{ zoom: nv }] }).then(() => {
+                zoomActual = nv;
+                aplicarZoomVista();
+            }).catch(() => {});
+        } else {
+            zoomActual = Math.min(3, Math.max(1, +(zoomActual + dir * 0.5).toFixed(1)));
+            aplicarZoomVista();
+        }
     }
 
     function actualizarNivelZoom() {
-        document.getElementById('zoomNivel').textContent = '×' + zoomActual.toFixed(1);
+        const enMax = zoomActual >= limiteZoom();
+        document.getElementById('zoomNivel').textContent = '×' + zoomActual.toFixed(1) + (enMax ? ' máx' : '');
     }
 
-    // Auto-zoom: acerca la cámara cuando la luz de la guía es muy pequeña
-    // (p. ej. un semáforo a 4 m). Avanza un paso cada ~350ms hasta que la luz
-    // tenga tamaño suficiente o se llegue al máximo. Los botones +/− siguen
-    // disponibles para ajustar a mano.
+    function limiteZoom() {
+        return trackZoom ? Math.min(zoomMax, Math.max(zoomMin, 1) * 2.5) : 3;
+    }
+
+    // Auto-zoom: agranda la vista cuando la luz de la guía es muy pequeña
+    // (p. ej. un semáforo a 4 m). Un paso cada ~350ms hasta que la luz tenga
+    // tamaño suficiente o se llegue al máximo. Los botones +/− siguen estando.
     function autoAcercar(litPixeles, guiaPixeles) {
-        if (!trackZoom || !litPixeles) return;
+        if (!litPixeles) return;
         if (appState !== 'calibrando' && appState !== 'esperando_fin_verde') return;
         const ahora = Date.now();
         if (ahora - ultimoAutoZoom < 350) return;
         if (litPixeles >= guiaPixeles * 0.02) return;
-        const objetivo = Math.min(zoomMax, Math.max(zoomMin, 1) * 2.5);
-        if (zoomActual >= objetivo || zoomActual >= zoomMax) {
+        const limite = limiteZoom();
+        if (zoomActual >= limite) {
             document.getElementById('zoomNivel').textContent = '×' + zoomActual.toFixed(1) + ' máx';
             return;
         }
-        const paso = Math.max(0.2, (zoomMax - zoomMin) / 20);
-        const nv = Math.min(zoomMax, objetivo, zoomActual + paso);
-        trackZoom.applyConstraints({ advanced: [{ zoom: nv }] }).then(() => {
-            zoomActual = nv;
-            actualizarNivelZoom();
-        }).catch(() => {});
+        if (trackZoom) {
+            const paso = Math.max(0.2, (zoomMax - zoomMin) / 20);
+            const nv = Math.min(zoomMax, limite, zoomActual + paso);
+            trackZoom.applyConstraints({ advanced: [{ zoom: nv }] }).then(() => {
+                zoomActual = nv;
+                aplicarZoomVista();
+            }).catch(() => {});
+        } else {
+            zoomActual = Math.min(3, +(zoomActual + 0.3).toFixed(1));
+            aplicarZoomVista();
+        }
         ultimoAutoZoom = ahora;
     }
 
@@ -279,7 +302,7 @@
             video.srcObject = stream;
             await video.play();
 
-            // Zoom nativo (constraint 'zoom') si está disponible
+            // Zoom nativo (constraint 'zoom') si existe; si no, zoom de pantalla (CSS)
             try {
                 const track = stream.getVideoTracks()[0];
                 const caps = track.getCapabilities ? track.getCapabilities() : {};
@@ -289,9 +312,12 @@
                     zoomMax = caps.zoom.max;
                     zoomPaso = caps.zoom.step || Math.max(0.1, (zoomMax - zoomMin) / 10);
                     zoomActual = caps.zoom.current != null ? caps.zoom.current : zoomMin;
-                    actualizarNivelZoom();
-                    document.getElementById('zoomBtns').style.display = 'flex';
+                } else {
+                    trackZoom = null;
+                    zoomActual = 1;
                 }
+                aplicarZoomVista();
+                document.getElementById('zoomBtns').style.display = 'flex';
             } catch (e) {}
 
             document.getElementById('btnStop').disabled = false;
@@ -342,37 +368,25 @@
         overlay.width = video.clientWidth;
         overlay.height = video.clientHeight;
 
-        // Guía vertical: rectángulo alto en el centro, dividido en 3 franjas iguales
-        const guiaW = overlay.width * 0.40;
-        const guiaH = overlay.height * 0.60;
+        // Guía grande: un solo recuadro amplio. La luz no necesita quedar exacta:
+        // se clasifica por color dentro de todo el recuadro.
+        const guiaW = overlay.width * 0.64;
+        const guiaH = overlay.height * 0.64;
         const guiaX = overlay.width / 2 - guiaW / 2;
         const guiaY = overlay.height / 2 - guiaH / 2;
-        const franjaH = guiaH / 3;
 
         ctx.clearRect(0, 0, overlay.width, overlay.height);
+        if (faseConfirmadaActual) {
+            ctx.fillStyle = 'rgba(255,255,255,0.12)';
+            ctx.fillRect(guiaX, guiaY, guiaW, guiaH);
+        }
         ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.strokeRect(guiaX, guiaY, guiaW, guiaH);
-        ctx.beginPath();
-        ctx.moveTo(guiaX, guiaY + franjaH); ctx.lineTo(guiaX + guiaW, guiaY + franjaH);
-        ctx.moveTo(guiaX, guiaY + franjaH * 2); ctx.lineTo(guiaX + guiaW, guiaY + franjaH * 2);
-        ctx.stroke();
-
-        // Etiquetas + tinte de zona activa
-        const tintos = { rojo: 'rgba(211,47,47,0.25)', amarillo: 'rgba(251,192,45,0.25)', verde: 'rgba(56,142,60,0.25)' };
-        const nombres = ['rojo', 'amarillo', 'verde'];
-        const etiqColores = ['#d32f2f', '#fbc02d', '#388e3c'];
-        nombres.forEach((n, i) => {
-            const y0 = guiaY + i * franjaH;
-            if (faseConfirmadaActual === n) {
-                ctx.fillStyle = tintos[n];
-                ctx.fillRect(guiaX + 1, y0 + 1, guiaW - 2, franjaH - 2);
-            }
-            ctx.fillStyle = etiqColores[i];
-            ctx.font = 'bold ' + Math.round(franjaH * 0.22) + 'px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(n.toUpperCase(), guiaX + guiaW / 2, y0 + franjaH / 2 + 5);
-        });
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = 'bold 13px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('ZONA DE DETECCIÓN', guiaX + 8, guiaY - 8);
 
         const sampleCanvas = procesarFrame.sampleCanvas || (procesarFrame.sampleCanvas = document.createElement('canvas'));
         sampleCanvas.width = video.videoWidth;
@@ -395,43 +409,39 @@
             };
         }
 
-        function zonaEnPixeles(indice) {
-            const p1 = pantallaANativo(guiaX, guiaY + franjaH * indice);
-            const p2 = pantallaANativo(guiaX + guiaW, guiaY + franjaH * (indice + 1));
+        function zonaEnPixeles() {
+            const p1 = pantallaANativo(guiaX, guiaY);
+            const p2 = pantallaANativo(guiaX + guiaW, guiaY + guiaH);
             return { x: p1.x, y: p1.y, w: p2.x - p1.x, h: p2.y - p1.y };
         }
 
-        const zRojo = zonaEnPixeles(0);
-        const zAmarillo = zonaEnPixeles(1);
-        const zVerde = zonaEnPixeles(2);
+        const z = zonaEnPixeles();
+        const analisis = clasificarPixeles(sctx, z.x, z.y, z.w, z.h);
 
-        const mRojo = muestrearBanda(sctx, zRojo.x, zRojo.y, zRojo.w, zRojo.h);
-        const mAmarillo = muestrearBanda(sctx, zAmarillo.x, zAmarillo.y, zAmarillo.w, zAmarillo.h);
-        const mVerde = muestrearBanda(sctx, zVerde.x, zVerde.y, zVerde.w, zVerde.h);
+        zonaEls.rojo.className = 'zona' + (analisis.cnt.rojo > 0 ? ' on-rojo' : '');
+        zonaEls.amarillo.className = 'zona' + (analisis.cnt.amarillo > 0 ? ' on-amarillo' : '');
+        zonaEls.verde.className = 'zona' + (analisis.cnt.verde > 0 ? ' on-verde' : '');
 
-        const rojoOn = bandaEncendida(mRojo, zRojo.w, zRojo.h);
-        const amarilloOn = bandaEncendida(mAmarillo, zAmarillo.w, zAmarillo.h);
-        const verdeOn = bandaEncendida(mVerde, zVerde.w, zVerde.h);
-
-        zonaEls.rojo.className = 'zona' + (rojoOn ? ' on-rojo' : '');
-        zonaEls.amarillo.className = 'zona' + (amarilloOn ? ' on-amarillo' : '');
-        zonaEls.verde.className = 'zona' + (verdeOn ? ' on-verde' : '');
-
-        // Auto-zoom: si la luz ocupa muy poco de la guía, acercar la cámara sola
-        // (hasta el límite del zoom o cuando la luz ya es lo bastante grande).
-        const litTotal = mRojo.lit + mAmarillo.lit + mVerde.lit;
-        const guiaPix = zRojo.w * zRojo.h;
-        autoAcercar(litTotal, guiaPix);
+        // Auto-zoom: si la luz ocupa muy poco de la guía, agrandar la vista (zoom
+        // óptico si existe, si no escalado de pantalla). Hasta que la luz tenga
+        // tamaño suficiente o se llegue al máximo.
+        autoAcercar(analisis.lit, z.w * z.h);
 
         const chipEstable = document.getElementById('chipEstable');
         chipEstable.innerText = faseConfirmadaActual
             ? `🟢 ${faseConfirmadaActual.toUpperCase()} · Estable`
             : (appState === 'calibrando' ? '🟠 Buscando semáforo…' : '🟡 Casi listo…');
 
-        const faseDetectada = calcularFase(rojoOn, amarilloOn, verdeOn);
+        const faseDetectada = fasePorConteo(analisis.cnt, 4);
 
-        historialFase.push(faseDetectada);
-        if (historialFase.length > TAMANO_HISTORIAL) historialFase.shift();
+        if (faseDetectada) {
+            historialFase.push(faseDetectada);
+            if (historialFase.length > TAMANO_HISTORIAL) historialFase.shift();
+        } else {
+            // Sin señal: vaciar la ventana para que la estabilidad requiera
+            // reencuadrar limpio desde cero (evita arrastrar un color viejo).
+            historialFase = [];
+        }
 
         const todosIguales = historialFase.length === TAMANO_HISTORIAL && historialFase.every(f => f === historialFase[0]);
         const faseEstable = todosIguales ? historialFase[0] : null;
