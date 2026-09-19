@@ -72,7 +72,7 @@
         <div class="zoom-nivel" id="zoomNivel">×1.0</div>
         <button class="zoom-btn" onclick="cambiarZoom(-1)">−</button>
         <div class="zoom-nivel">Zona</div>
-        <button class="zoom-btn" id="btnZona" onclick="cambiarTamanoZona()">⟦⟧ M</button>
+        <button class="zoom-btn" id="btnZona" onclick="cambiarTamanoZona()">⟦⟧ S</button>
     </div>
     <div class="estado-chip" id="chipEstable">🟠 Buscando semáforo…</div>
 </div>
@@ -136,7 +136,9 @@
     // Zonas rectangulares [ancho, alto] en fracción de pantalla: más alta que
     // ancha para aislar la columna del semáforo sin captar luces vecinas.
     const TAMANOS_ZONA = [[0.22, 0.32], [0.28, 0.42], [0.36, 0.52]];
-    let nivelZona = 1;
+    // Zona S por defecto: recorta mejor las luces vecinas y, con el umbral
+    // relativo, es la más sensible a semáforos lejanos. Se agranda con el botón.
+    let nivelZona = 0;
     const NOMBRES_ZONA = ['S', 'M', 'G'];
 
     // Zoom nativo de la cámara (si el dispositivo lo soporta)
@@ -201,15 +203,24 @@
     ];
 
     function clasificarPixeles(sctx, x, y, w, h) {
+        const vacio = { cnt: { rojo: 0, amarillo: 0, verde: 0 }, lit: 0, n: 0 };
+        if (!(w > 0 && h > 0)) return vacio;
         let data;
         try {
             data = sctx.getImageData(x, y, w, h).data;
         } catch (e) {
-            return { cnt: { rojo: 0, amarillo: 0, verde: 0 }, lit: 0 };
+            return vacio;
         }
         const cnt = { rojo: 0, amarillo: 0, verde: 0 };
         let lit = 0;
-        for (let i = 0; i < data.length; i += 8) {
+        // Muestreo adaptativo: analiza ~20 mil muestras siempre, sin importar
+        // la resolución del sensor ni el tamaño de la zona. A 720p la imagen
+        // es 4x más nítida que a 480p con el mismo costo de CPU.
+        const pasoPx = Math.max(1, Math.floor(Math.sqrt((w * h) / 20000)));
+        const paso = pasoPx * 4;
+        let n = 0;
+        for (let i = 0; i < data.length; i += paso) {
+            n++;
             const hsv = rgbToHsv(data[i], data[i + 1], data[i + 2]);
             // Solo píxeles bien iluminados y saturados (la luz encendida);
             // así farolas blancas, cielo y asfalto no votan ni inflan el "lit".
@@ -221,7 +232,7 @@
                 }
             }
         }
-        return { cnt, lit };
+        return { cnt, lit, n };
     }
 
     // Fase del semáforo = color con más píxeles encendidos, con dos exigencias:
@@ -348,8 +359,11 @@
 
     async function iniciar() {
         try {
+            // HD cuando el dispositivo lo soporta (si no, el navegador baja
+            // solo): la imagen se ve nítida y la luz ocupa más píxeles. El
+            // costo se mantiene fijo con el muestreo adaptativo de abajo.
             stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
             });
             video.srcObject = stream;
             await video.play();
@@ -490,9 +504,8 @@
         const z = zonaEnPixeles();
         const analisis = clasificarPixeles(sctx, z.x, z.y, z.w, z.h);
 
-        // Nº de muestras analizadas (se muestrea 1 de cada 2 px): base del umbral relativo.
-        const totalMuestras = Math.max(1, Math.floor((z.w * z.h) / 2));
-        const faseDetectada = fasePorConteo(analisis.cnt, totalMuestras);
+        // Nº real de muestras analizadas (muestreo adaptativo): base del umbral relativo.
+        const faseDetectada = fasePorConteo(analisis.cnt, Math.max(1, analisis.n));
 
         // Los chips muestran la fase DETECTADA (con umbral + histéresis), no el
         // conteo crudo: así no parpadean con ruido de unos pocos píxeles.
