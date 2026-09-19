@@ -48,7 +48,7 @@ npm run android:build   # genera android/app/build/outputs/apk/debug/app-debug.a
 
 ## Compilar el APK (CI)
 
-Cada push a `main` o `prueba-cambios` dispara `.github/workflows/build-apk.yml`, que:
+Cada push a `main` o `pruebas` dispara `.github/workflows/build-apk.yml`, que:
 compila con Gradle, parchea el `AndroidManifest` y `MainActivity` (mostrar sobre
 lock screen + bloquear toda interacción mientras está bloqueado) y sube el APK
 como artifact del run.
