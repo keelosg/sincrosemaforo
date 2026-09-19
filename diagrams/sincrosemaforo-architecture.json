@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Arquitectura de sincrosemaforo",
+    "output": "sincrosemaforo-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "runtime", "label": "Uso en el dispositivo", "focus": ["usuario", "camara", "webview"], "note": "El usuario apunta la cámara y la app web mide el semáforo." },
+      { "id": "nativo", "label": "Capa nativa y lockscreen", "focus": ["webview", "bridge", "plugins", "mainactivity", "lockscreen"], "note": "El Bridge conecta la web con el Android nativo que controla la pantalla de bloqueo." },
+      { "id": "build", "label": "Build y entrega", "focus": ["ghactions", "gradle", "apk", "lockscreen"], "note": "Cada push compila el APK debug que se instala por sideload." }
+    ]
+  },
+  "components": [
+    { "id": "usuario", "type": "external", "label": "Usuario", "sublabel": "toca / enfoca", "pos": [40, 300], "size": [130, 64] },
+    { "id": "camara", "type": "external", "label": "Cámara", "sublabel": "getUserMedia", "pos": [250, 110], "size": [150, 64], "tag": "detección de color" },
+    { "id": "webview", "type": "frontend", "label": "WebView", "sublabel": "index.html / automatico.html", "pos": [250, 300], "size": [180, 68] },
+    { "id": "bridge", "type": "backend", "label": "Capacitor Bridge", "sublabel": "JS ↔ nativo", "pos": [470, 300], "size": [160, 68] },
+    { "id": "plugins", "type": "backend", "label": "Plugins", "sublabel": "@capacitor/app + haptics", "pos": [470, 110], "size": [170, 68] },
+    { "id": "mainactivity", "type": "backend", "label": "MainActivity", "sublabel": "extiende BridgeActivity", "pos": [690, 300], "size": [180, 68] },
+    { "id": "lockscreen", "type": "external", "label": "Android Lock Screen", "sublabel": "KeyguardManager", "pos": [910, 300], "size": [170, 68], "tag": "showWhenLocked" },
+    { "id": "ghactions", "type": "cloud", "label": "GitHub Actions", "sublabel": "build-apk.yml", "pos": [250, 440], "size": [170, 68], "brand": "github-actions", "tag": "Node 22 + JDK 21" },
+    { "id": "gradle", "type": "backend", "label": "Gradle", "sublabel": "assembleDebug", "pos": [470, 440], "size": [150, 68] },
+    { "id": "apk", "type": "cloud", "label": "app-debug.apk", "sublabel": "artifact", "pos": [690, 440], "size": [160, 68] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Runtime en el dispositivo Android", "wraps": ["usuario", "camara", "webview", "bridge", "plugins", "mainactivity", "lockscreen"] },
+    { "kind": "region", "label": "CI: build y entrega", "wraps": ["ghactions", "gradle", "apk"] }
+  ],
+  "connections": [
+    { "id": "usuario-webview", "from": "usuario", "to": "webview", "variant": "emphasis" },
+    { "id": "camara-webview", "from": "camara", "to": "webview", "label": "video (getUserMedia)", "fromSide": "bottom", "toSide": "top" },
+    { "id": "webview-bridge", "from": "webview", "to": "bridge", "label": "llamadas de plugin", "labelDy": 58 },
+    { "id": "bridge-plugins", "from": "bridge", "to": "plugins", "label": "API nativa", "fromSide": "top", "toSide": "bottom" },
+    { "id": "bridge-mainactivity", "from": "bridge", "to": "mainactivity", "label": "llamadas nativas", "labelDy": 58 },
+    { "id": "mainactivity-lockscreen", "from": "mainactivity", "to": "lockscreen", "label": "showWhenLocked / turnScreenOn", "labelDy": 58 },
+    { "id": "ghactions-gradle", "from": "ghactions", "to": "gradle", "label": "build" },
+    { "id": "gradle-apk", "from": "gradle", "to": "apk", "label": "assembleDebug", "labelDy": 58 },
+    { "id": "apk-lockscreen", "from": "apk", "to": "lockscreen", "label": "sideload", "variant": "dashed", "fromSide": "top", "toSide": "bottom" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "App web", "items": ["WebView carga index.html / automatico.html desde www/", "Detección de color del semáforo por cámara (getUserMedia)", "Cronómetro de fases y vista de un solo botón"] },
+    { "dot": "emerald", "title": "Capa nativa Android", "items": ["MainActivity extiende BridgeActivity", "Se muestra sobre la pantalla de bloqueo (showWhenLocked + turnScreenOn)", "Descarta todos los toques mientras el móvil está bloqueado"] },
+    { "dot": "amber", "title": "Build y entrega", "items": ["GitHub Actions (Node 22 + JDK 21) en cada push a main", "npx cap add android → gradle assembleDebug", "Publica app-debug.apk como artifact"] }
+  ]
+}
