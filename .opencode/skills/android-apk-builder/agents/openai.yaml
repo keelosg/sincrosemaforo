@@ -1,0 +1,3 @@
+display_name: Android APK Builder
+short_description: Build polished mobile-first Android APK demos from app briefs or web demos.
+default_prompt: Create an installable Android APK from my design requirements and text assets. Implement the UI, button flows, safe native capabilities, Capacitor packaging, validation, and final APK delivery.

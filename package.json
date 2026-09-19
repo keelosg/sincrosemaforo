@@ -1,16 +1,22 @@
 {
-  "name": "mi-app",
+  "name": "sincrosemaforo",
   "version": "1.0.0",
+  "description": "App para consultar el tiempo de un semáforo cuando no lo estás mirando.",
+  "private": true,
   "scripts": {
-    "sync": "bash sync-index.sh"
+    "sync": "node scripts/sync-index.mjs",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:build": "cd android && ./gradlew assembleDebug",
+    "icon": "npx @capacitor/assets generate --android"
   },
   "dependencies": {
-    "@capacitor/core": "^6.0.0",
-    "@capacitor/android": "^6.0.0",
-    "@capacitor/app": "^6.0.0",
-    "@capacitor/haptics": "^6.0.0"
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.0.0"
+    "@capacitor/cli": "^8.5.2"
   }
 }

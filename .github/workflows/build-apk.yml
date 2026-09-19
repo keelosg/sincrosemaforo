@@ -13,13 +13,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         run: npm install
 
-      - name: Sincronizar web assets (index.html es la fuente de verdad)
-        run: bash sync-index.sh
+      - name: Sincronizar web assets (src/ index.html es la fuente de verdad)
+        run: node scripts/sync-index.mjs
 
       - name: Add Android platform
         run: npx cap add android
@@ -168,7 +168,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Usar debug keystore fijo (permite actualizar el APK sin desinstalar)
         run: |
