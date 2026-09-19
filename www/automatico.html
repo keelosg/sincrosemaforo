@@ -8,6 +8,17 @@
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
     html, body { height: 100%; }
     body { background: #121212; color: #fff; margin: 0; display: flex; flex-direction: column; overflow: hidden; }
+    /* Tema claro (respeta el ajuste de la app): la zona de cámara sigue oscura. */
+    body.light { background: #f2f2f2; color: #111; }
+    body.light .card { background: #ffffff; }
+    body.light .zona { background: #e4e4e4; }
+    body.light .medida { background: #efefef; color: #555; }
+    body.light .medida .val { color: #111; }
+    body.light .log { color: #555; }
+    body.light .nota { color: #777; }
+    body.light .status-idle { background: #e0e0e0; color: #555; }
+    button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+    body.light button:focus-visible { outline-color: #111; }
 
     /* ===== Zona superior: cámara, ocupa el espacio restante (~2/3) ===== */
     .camara-zone { flex: 2 1 0; min-height: 0; position: relative; background: #000; }
@@ -16,9 +27,9 @@
     canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     h2 { position: absolute; top: 8px; left: 56px; right: 12px; margin: 0; font-size: 0.95em; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
     .sub { position: absolute; top: 32px; left: 56px; right: 12px; font-size: 0.7em; color: #ddd; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
-    .btn-atras { position: absolute; top: 8px; left: 8px; z-index: 3; width: 40px; height: 40px; padding: 0; margin: 0; border-radius: 50%; font-size: 1.1em; background: rgba(20,20,20,0.7); color: #fff; border: 1px solid #444; }
+    .btn-atras { position: absolute; top: 8px; left: 8px; z-index: 3; width: 48px; height: 48px; padding: 0; margin: 0; border-radius: 50%; font-size: 1.1em; background: rgba(20,20,20,0.7); color: #fff; border: 1px solid #444; }
     .zoom-btns { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 3; display: none; flex-direction: column; align-items: center; gap: 6px; }
-    .zoom-btn { width: 40px; height: 40px; padding: 0; margin: 0; border-radius: 50%; font-size: 1.4em; font-weight: 700; background: rgba(20,20,20,0.7); color: #fff; border: 1px solid #444; }
+    .zoom-btn { width: 48px; height: 48px; padding: 0; margin: 0; border-radius: 50%; font-size: 1.4em; font-weight: 700; background: rgba(20,20,20,0.7); color: #fff; border: 1px solid #444; }
     .zoom-nivel { font-size: 0.65em; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
 
     .estado-chip { position: absolute; bottom: 10px; left: 10px; z-index: 3; font-size: 0.78em; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.95); background: rgba(20,20,20,0.6); padding: 6px 10px; border-radius: 999px; }
@@ -26,8 +37,8 @@
     /* ===== Zona inferior: controles, fijada a ~1/3 de la pantalla con scroll ===== */
     .controles-zone { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 10px 12px; }
 
-    .card { background: #1e1e1e; padding: 10px; border-radius: 10px; margin-top: 8px; text-align: left; }
-    button { width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 0.9em; font-weight: bold; cursor: pointer; margin-top: 6px; }
+    .card { background: #1e1e1e; padding: 10px; border-radius: 14px; margin-top: 8px; text-align: left; }
+    button { width: 100%; padding: 10px; min-height: 48px; border-radius: 14px; border: none; font-size: 0.9em; font-weight: bold; cursor: pointer; margin-top: 6px; }
     .btn-row { display: flex; gap: 8px; }
     .btn-row button { margin-top: 0; }
     .btn-start { background: #00e676; color: #000; }
@@ -61,40 +72,41 @@
 
 <div class="camara-zone">
     <div class="video-wrap">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="overlay"></canvas>
+        <video id="video" autoplay playsinline muted aria-label="Vista previa de la cámara apuntando al semáforo"></video>
+        <canvas id="overlay" aria-hidden="true"></canvas>
     </div>
-    <button class="btn-atras" onclick="window.location.href='index.html'">‹</button>
+    <button class="btn-atras" onclick="window.location.href='index.html'" aria-label="Volver al inicio">‹</button>
     <h2>🔵 Calibración: apunta y espera</h2>
     <div class="sub">Mete la luz del semáforo dentro del recuadro (no hace falta exactitud)</div>
     <div class="zoom-btns" id="zoomBtns">
-        <button class="zoom-btn" onclick="cambiarZoom(1)">+</button>
+        <button class="zoom-btn" onclick="cambiarZoom(1)" aria-label="Acercar imagen">+</button>
         <div class="zoom-nivel" id="zoomNivel">×1.0</div>
-        <button class="zoom-btn" onclick="cambiarZoom(-1)">−</button>
+        <button class="zoom-btn" onclick="cambiarZoom(-1)" aria-label="Alejar imagen">−</button>
         <div class="zoom-nivel">Zona</div>
-        <button class="zoom-btn" id="btnZona" onclick="cambiarTamanoZona()">⟦⟧ S</button>
+        <button class="zoom-btn" id="btnZona" onclick="cambiarTamanoZona()" aria-label="Tamaño de zona: pequeña">⟦⟧ S</button>
     </div>
     <div class="estado-chip" id="chipEstable">🟠 Buscando semáforo…</div>
 </div>
 
 <div class="controles-zone">
     <div class="zonas">
-        <div class="zona" id="zonaRojo"><div class="dot"></div><span class="lbl">ROJO</span></div>
-        <div class="zona" id="zonaAmarillo"><div class="dot"></div><span class="lbl">AMARILLO</span></div>
-        <div class="zona" id="zonaVerde"><div class="dot"></div><span class="lbl">VERDE</span></div>
+        <div class="zona" id="zonaRojo"><div class="dot" aria-hidden="true"></div><span class="lbl">Rojo</span></div>
+        <div class="zona" id="zonaAmarillo"><div class="dot" aria-hidden="true"></div><span class="lbl">Amarillo</span></div>
+        <div class="zona" id="zonaVerde"><div class="dot" aria-hidden="true"></div><span class="lbl">Verde</span></div>
     </div>
 
     <div class="medidas">
-        <div class="medida"><span class="lbl">ROJO</span><div class="val" id="medRojo">--</div></div>
-        <div class="medida"><span class="lbl">AMARILLO</span><div class="val" id="medAmarillo">--</div></div>
-        <div class="medida"><span class="lbl">VERDE</span><div class="val" id="medVerde">--</div></div>
+        <div class="medida"><span class="lbl">Rojo</span><div class="val" id="medRojo">--</div></div>
+        <div class="medida"><span class="lbl">Amarillo</span><div class="val" id="medAmarillo">--</div></div>
+        <div class="medida"><span class="lbl">Verde</span><div class="val" id="medVerde">--</div></div>
     </div>
 
     <div class="btn-row">
         <button id="btnStop" class="btn-stop" onclick="detener()">✖ Cancelar y volver</button>
     </div>
+    <button id="btnReintentar" class="btn-start" style="display:none;" onclick="iniciar()">↻ Reintentar cámara</button>
 
-    <div id="status" class="status status-idle">Iniciando cámara...</div>
+    <div id="status" class="status status-idle" aria-live="polite">Iniciando cámara...</div>
 
     <div class="card">
         <label style="font-size:0.75em;color:#aaa;">Detecciones</label>
@@ -116,8 +128,12 @@
     const logBox = document.getElementById('log');
     const resultadoCard = document.getElementById('resultadoCard');
     const resultadoTabla = document.getElementById('resultadoTabla');
-    const copiableBox = document.getElementById('copiable');
     const zonaEls = { rojo: document.getElementById('zonaRojo'), amarillo: document.getElementById('zonaAmarillo'), verde: document.getElementById('zonaVerde') };
+
+    // Respeta el tema elegido en la app (la zona de cámara siempre es oscura).
+    if (localStorage.getItem('temaOscuro') === 'false') document.body.classList.add('light');
+
+    const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
     let stream = null;
     let rafId = null;
@@ -140,6 +156,7 @@
     // relativo, es la más sensible a semáforos lejanos. Se agranda con el botón.
     let nivelZona = 0;
     const NOMBRES_ZONA = ['S', 'M', 'G'];
+    const NOMBRES_ZONA_LARGO = ['pequeña', 'mediana', 'grande'];
 
     // Zoom nativo de la cámara (si el dispositivo lo soporta)
     let trackZoom = null;
@@ -272,9 +289,10 @@
         return a.reduce((x, y) => x + y, 0) / a.length;
     }
 
-    // Segundos con hasta 3 decimales y coma decimal (formato de visualización)
+    // Formato único de duraciones con la app: "20 s" o "12,5 s" (coma decimal).
     function fmtSeg(ms) {
-        return (ms / 1000).toFixed(3).replace('.', ',');
+        const s = Math.round(ms / 100) / 10;
+        return s.toString().replace('.', ',');
     }
 
     // Actualiza los contadores en vivo (chips con los segundos medidos por color)
@@ -318,7 +336,9 @@
     // Cambia el tamaño del recuadro de detección (pequeña / mediana / grande)
     function cambiarTamanoZona() {
         nivelZona = (nivelZona + 1) % TAMANOS_ZONA.length;
-        document.getElementById('btnZona').textContent = '⟦⟧ ' + NOMBRES_ZONA[nivelZona];
+        const btn = document.getElementById('btnZona');
+        btn.textContent = '⟦⟧ ' + NOMBRES_ZONA[nivelZona];
+        btn.setAttribute('aria-label', 'Tamaño de zona: ' + NOMBRES_ZONA_LARGO[nivelZona]);
     }
 
     function limiteZoom() {
@@ -358,6 +378,7 @@
     }
 
     async function iniciar() {
+        document.getElementById('btnReintentar').style.display = 'none';
         try {
             // HD cuando el dispositivo lo soporta (si no, el navegador baja
             // solo): la imagen se ve nítida y la luz ocupa más píxeles. El
@@ -413,8 +434,10 @@
             requestAnimationFrame(procesarFrame);
         } catch (err) {
             statusBox.className = 'status status-idle';
-            statusBox.innerText = 'No se pudo acceder a la cámara: ' + err.message;
+            statusBox.innerText = 'No se pudo acceder a la cámara: ' + err.message +
+                '. Revisa el permiso de cámara del navegador y reintenta.';
             agregarLog('Error: ' + err.message);
+            document.getElementById('btnReintentar').style.display = 'block';
         }
     }
 
@@ -520,7 +543,7 @@
 
         const chipEstable = document.getElementById('chipEstable');
         if (faseConfirmadaActual) {
-            chipEstable.innerText = `🟢 ${faseConfirmadaActual.toUpperCase()} · Estable`;
+            chipEstable.innerText = `🟢 ${cap(faseConfirmadaActual)} · Estable`;
         } else if (appState === 'calibrando' && Date.now() - ultimaDeteccion > 4000) {
             chipEstable.innerText = '🟠 ¿No se ve la luz? Acerca el teléfono o toca +';
         } else {
@@ -579,7 +602,7 @@
                     inicioFaseActual = tTransicion;
                     ordenCiclo = [faseEstable];
                     vecesAnclaVista = 1;
-                    agregarLog(`Color de referencia: ${faseEstable.toUpperCase()}`);
+                    agregarLog(`Color de referencia: ${cap(faseEstable)}`);
                 } else {
                     // Transición: la fase terminada termina en este instante
                     manejarTransicion(faseActual, inicioFaseActual, faseEstable, tTransicion);
@@ -613,7 +636,7 @@
         conteoFin[faseTerminada] = (conteoFin[faseTerminada] || 0) + 1;
         actualizarMedidas();
 
-        agregarLog(`Transición → ${nuevaFase.toUpperCase()} (${faseTerminada.toUpperCase()} ${fmtSeg(dur)} s)`);
+        agregarLog(`Transición → ${cap(nuevaFase)} (${cap(faseTerminada)} ${fmtSeg(dur)} s)`);
 
         // Cierre del ciclo: la luz de referencia volvió -> vuelta completa.
         // (Se refuerza con un fallback genérico para ciclos raros.)
@@ -658,10 +681,9 @@
             const seg = medirFase(k) / 1000;
             const s = Math.round(seg * 1000) / 1000;
             if (mapaFases[k]) config[mapaFases[k]] = s;
-            filas += `<tr><td>${k.toUpperCase()}</td><td>${fmtSeg(seg * 1000)} s</td></tr>`;
+            filas += `<tr><td>${cap(k)}</td><td>${fmtSeg(seg * 1000)} s</td></tr>`;
         });
-resultadoTabla.innerHTML = `<table>${filas}</table>`;
-        if (copiableBox) copiableBox.innerText = JSON.stringify(config, null, 2);
+        resultadoTabla.innerHTML = `<table>${filas}</table>`;
     }
 
     function dispararSincronizacion(timestamp) {

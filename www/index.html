@@ -26,11 +26,17 @@
             --flecha: #00897b;
         }
         body { background: var(--bg); color: var(--text); margin: 0; text-align: center; transition: background 0.25s; }
-        body.light { --bg: #f2f2f2; --card-bg: #ffffff; --border: #cccccc; }
+        body.light {
+            --bg: #f2f2f2; --card-bg: #ffffff; --border: #cccccc;
+            --text: #111111; --dim: #555555; --faint: #666666;
+            --btn-bg: #e0e0e0; --btn-fg: #111111;
+            --muted-bg: #dddddd; --muted-fg: #5a5a5a;
+        }
         body.light .btn-ajustes { color: #555; }
-        body.light .tagline, body.light .hint { color: #888; }
         .hidden { display: none !important; }
         button { border: none; font-weight: bold; cursor: pointer; }
+        button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+        body.light button:focus-visible { outline-color: #111; }
 
         /* ===== HOME (sin sincronizar): un botón gigante ===== */
         #homeView { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px 26px; }
@@ -40,17 +46,26 @@
         .brand .tagline { color: var(--faint); font-size: 0.9em; margin: 0; }
         #btnCam {
             width: 100%; max-width: 420px; padding: 34px 20px;
-            font-size: 1.55em; font-weight: 900; border-radius: 20px;
-            background: #00897b; color: #fff;
-            box-shadow: 0 8px 26px rgba(0,137,123,0.45);
+            font-size: 1.55em; font-weight: 900; border-radius: 16px;
+            background: var(--accent); color: #000;
+            box-shadow: 0 8px 26px rgba(0,230,118,0.35);
         }
         .hint { color: var(--faint); font-size: 0.85em; max-width: 360px; margin: 18px auto 6px; line-height: 1.5; }
-        .btn-ajustes { background: transparent; color: var(--dim); font-size: 0.95em; padding: 12px; margin-top: 20px; }
+        .btn-ajustes { background: transparent; color: var(--dim); font-size: 0.95em; padding: 12px; margin-top: 20px; min-height: 48px; }
         .card { background: var(--card-bg); border-radius: 14px; padding: 16px; max-width: 420px; width: 100%; margin-top: 12px; }
+
+        /* Guía de 3 pasos en home */
+        .pasos { text-align: left; }
+        .paso { display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: 0.92em; }
+        .paso-n {
+            flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%;
+            background: var(--accent); color: #000; font-weight: 900;
+            display: flex; align-items: center; justify-content: center; font-size: 0.9em;
+        }
 
         /* Toggles de Ajustes */
         .toggle-row { display: flex; flex-direction: column; gap: 8px; }
-        .toggle-btn { width: 100%; padding: 14px; font-size: 1em; border-radius: 10px; background: var(--accent); color: #000; }
+        .toggle-btn { width: 100%; padding: 14px; min-height: 48px; font-size: 1em; border-radius: 14px; background: var(--accent); color: #000; }
         .toggle-btn.off { background: var(--muted-bg); color: var(--muted-fg); }
 
         /* ===== VISTA CRONO: fase a pantalla completa ===== */
@@ -68,8 +83,8 @@
         #cronoTop { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
         .order-chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .chip {
-            padding: 6px 10px; border-radius: 999px; font-size: 0.72em; font-weight: 800;
-            color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); opacity: 0.35;
+            padding: 6px 10px; border-radius: 999px; font-size: 0.78em; font-weight: 800;
+            color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); opacity: 0.65;
             border: 2px solid rgba(255,255,255,0.25);
         }
         .chip.active { opacity: 1; border-color: rgba(255,255,255,0.9); box-shadow: 0 0 12px rgba(255,255,255,0.35); }
@@ -82,7 +97,7 @@
         .crono-centro { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .state-text { font-size: 2.6em; font-weight: 900; text-shadow: 0 3px 10px rgba(0,0,0,0.55); letter-spacing: 2px; }
         .timer-text { font-size: 7em; font-weight: 900; line-height: 1; text-shadow: 0 4px 16px rgba(0,0,0,0.5); }
-        .window-status { font-size: 1.2em; font-weight: 900; padding: 12px 20px; border-radius: 999px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+        .window-status { font-size: 1.2em; font-weight: 900; padding: 12px 20px; border-radius: 999px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); background: rgba(0,0,0,0.35); }
 
         .bajada-wrap { width: 100%; max-width: 420px; }
         .bajada-label { font-size: 0.8em; font-weight: 700; color: rgba(255,255,255,0.85); text-shadow: 0 1px 3px rgba(0,0,0,0.5); margin-bottom: 6px; }
@@ -91,15 +106,16 @@
         .bajada-value { font-size: 3em; font-weight: 900; text-shadow: 0 3px 10px rgba(0,0,0,0.5); }
 
         .upcoming { width: 100%; max-width: 420px; display: flex; gap: 10px; }
-        .upcoming-item { flex: 1; background: rgba(0,0,0,0.35); border-radius: 12px; padding: 10px; }
-        .upcoming-item .u-label { font-size: 0.7em; color: rgba(255,255,255,0.75); }
+        .upcoming-item { flex: 1; background: rgba(0,0,0,0.35); border-radius: 14px; padding: 10px; }
+        .upcoming-item .u-label { font-size: 0.78em; color: rgba(255,255,255,0.85); }
         .upcoming-item .u-name { font-weight: 900; margin-top: 2px; }
         .upcoming-item .u-dur { font-size: 0.85em; opacity: 0.9; }
 
         .linear-wrap { width: 100%; max-width: 420px; margin-top: 4px; }
         .linear-bar { position: relative; height: 26px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.3); }
         .segment { position: absolute; top: 0; bottom: 0; }
-        .safe-bar { position: relative; height: 12px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.25); margin-top: 4px; }
+        .safe-label { font-size: 0.78em; font-weight: 700; color: rgba(255,255,255,0.85); text-shadow: 0 1px 3px rgba(0,0,0,0.5); margin: 6px 0 4px; }
+        .safe-bar { position: relative; height: 16px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.25); }
         .depart-zone { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, rgba(255,224,130,0.95), rgba(255,224,130,0.95) 4px, rgba(255,183,77,0.95) 4px, rgba(255,183,77,0.95) 8px); }
         .playhead { position: absolute; top: -4px; bottom: -4px; width: 4px; background: #fff; border-radius: 2px; box-shadow: 0 0 8px 3px rgba(255,255,255,0.9); transition: left 0.15s linear; z-index: 2; }
 
@@ -127,13 +143,18 @@
         </div>
         <button id="btnCam" onclick="abrirCamara()">📷 Enfocar semáforo</button>
         <p class="hint">Mantén la cámara apuntando al semáforo una vuelta completa.
-        Cuando cambie el VERDE, la app arranca sola con tus tiempos.</p>
-        <button class="btn-ajustes" onclick="toggleAjustes()">⚙ Ajustes</button>
+        Cuando cambie a verde, la app arranca sola con tus tiempos.</p>
+        <div class="card pasos">
+            <div class="paso"><span class="paso-n">1</span> Enfoca el semáforo en rojo</div>
+            <div class="paso"><span class="paso-n">2</span> Mantén el teléfono quieto una vuelta completa</div>
+            <div class="paso"><span class="paso-n">3</span> La cuenta atrás arranca sola en verde</div>
+        </div>
+        <button class="btn-ajustes" onclick="toggleAjustes()" aria-expanded="false" id="btnAjustesToggle">⚙ Ajustes</button>
         <div id="ajustesCard" class="card hidden">
             <div class="toggle-row">
-                <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: ON</button>
-                <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: ON</button>
-                <button id="btnTema" class="toggle-btn" onclick="alternarTema()">🌙 Tema: Oscuro</button>
+                <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: activado</button>
+                <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: activada</button>
+                <button id="btnTema" class="toggle-btn" onclick="alternarTema()">🌙 Tema: oscuro</button>
             </div>
         </div>
     </div>
@@ -143,21 +164,21 @@
         <div id="lightBox" class="light-display bg-off">
             <div id="cronoTop">
                 <div class="order-chips" id="orderChips"></div>
-                <button id="btnPausarMini" onclick="pausarYVolver()">⏸</button>
+                <button id="btnPausarMini" onclick="pausarYVolver()" aria-label="Pausar y volver al inicio">⏸</button>
             </div>
 
             <div class="crono-centro">
-                <div id="stateText" class="state-text">SIN SINCRONIZAR</div>
-                <div id="timerText" class="timer-text">--</div>
-                <div id="windowStatus" class="window-status"></div>
+                <div id="stateText" class="state-text">Sin sincronizar</div>
+                <div id="timerText" class="timer-text" role="timer" aria-label="Segundos restantes">--</div>
+                <div id="windowStatus" class="window-status" aria-live="polite"></div>
             </div>
 
             <div class="bajada-wrap">
                 <div class="bajada-label">Tiempo hasta el semáforo</div>
                 <div class="bajada-stepper">
-                    <button class="stepper-btn" onclick="cambiarBajada(-1)">−</button>
-                    <div class="bajada-value"><span id="bajadaVal">--</span>s</div>
-                    <button class="stepper-btn" onclick="cambiarBajada(1)">+</button>
+                    <button class="stepper-btn" onclick="cambiarBajada(-1)" aria-label="Quitar un segundo">−</button>
+                    <div class="bajada-value"><span id="bajadaVal">--</span> s</div>
+                    <button class="stepper-btn" onclick="cambiarBajada(1)" aria-label="Agregar un segundo">+</button>
                 </div>
             </div>
 
@@ -176,13 +197,14 @@
 
             <div class="linear-wrap">
                 <div class="linear-bar" id="linearBar"></div>
+                <div class="safe-label">Momento ideal para bajar</div>
                 <div class="safe-bar" id="safeBar"></div>
             </div>
         </div>
     </div>
 
     <!-- Inputs invisibles: aquí viven los tiempos (los alimenta la cámara) -->
-    <div style="display:none;">
+    <div style="display:none;" aria-hidden="true">
         <input id="tVerde" value="20">
         <input id="tAmarillo" value="0">
         <input id="tRojo" value="35">
@@ -260,7 +282,9 @@
 
         // ===== Ajustes =====
         function toggleAjustes() {
-            document.getElementById('ajustesCard').classList.toggle('hidden');
+            const card = document.getElementById('ajustesCard');
+            card.classList.toggle('hidden');
+            document.getElementById('btnAjustesToggle').setAttribute('aria-expanded', String(!card.classList.contains('hidden')));
         }
 
         function toggleSonido() {
@@ -279,9 +303,9 @@
         function actualizarBotonesToggle() {
             const btnSonido = document.getElementById('btnSonido');
             const btnVibracion = document.getElementById('btnVibracion');
-            btnSonido.innerText = `🔊 Sonido: ${sonidoActivado ? 'ON' : 'OFF'}`;
+            btnSonido.innerText = `🔊 Sonido: ${sonidoActivado ? 'activado' : 'desactivado'}`;
             btnSonido.classList.toggle('off', !sonidoActivado);
-            btnVibracion.innerText = `📳 Vibración: ${vibracionActivada ? 'ON' : 'OFF'}`;
+            btnVibracion.innerText = `📳 Vibración: ${vibracionActivada ? 'activada' : 'desactivada'}`;
             btnVibracion.classList.toggle('off', !vibracionActivada);
         }
 
@@ -290,22 +314,22 @@
         function aplicarTema() {
             document.body.classList.toggle('light', !temaOscuro);
             const btn = document.getElementById('btnTema');
-            if (btn) btn.innerText = temaOscuro ? '🌙 Tema: Oscuro' : '☀️ Tema: Claro';
+            if (btn) btn.innerText = temaOscuro ? '🌙 Tema: oscuro' : '☀️ Tema: claro';
         }
         function alternarTema() {
             temaOscuro = !temaOscuro;
             localStorage.setItem('temaOscuro', temaOscuro);
             const btn = document.getElementById('btnTema');
-            btn.innerText = temaOscuro ? '🌙 Tema: Oscuro' : '☀️ Tema: Claro';
+            btn.innerText = temaOscuro ? '🌙 Tema: oscuro' : '☀️ Tema: claro';
             aplicarTema();
         }
 
         // ===== Configuración de fases =====
         const phasesConfig = {
-            verde:     { label: 'VERDE',           className: 'bg-verde',     inputId: 'tVerde',     dot: '#388e3c' },
-            amarillo:  { label: 'AMARILLO',        className: 'bg-amarillo',  inputId: 'tAmarillo',  dot: '#fbc02d' },
-            rojo:      { label: 'ROJO',            className: 'bg-rojo',      inputId: 'tRojo',      dot: '#d32f2f' },
-            flecha:    { label: 'FLECHA',          className: 'bg-flecha',    inputId: 'tFlecha',    dot: '#00897b' }
+            verde:     { label: 'Verde',           className: 'bg-verde',     inputId: 'tVerde',     dot: '#388e3c' },
+            amarillo:  { label: 'Amarillo',        className: 'bg-amarillo',  inputId: 'tAmarillo',  dot: '#fbc02d' },
+            rojo:      { label: 'Rojo',            className: 'bg-rojo',      inputId: 'tRojo',      dot: '#d32f2f' },
+            flecha:    { label: 'Flecha',          className: 'bg-flecha',    inputId: 'tFlecha',    dot: '#00897b' }
         };
         let order = JSON.parse(localStorage.getItem('phaseOrder') || 'null') || ['verde', 'flecha', 'amarillo', 'rojo'];
 
@@ -317,8 +341,10 @@
             return duraciones;
         }
 
+        // Formato único de duraciones: "20 s" o "12,5 s" (coma decimal).
         function formatearSegundos(ms) {
-            return Math.round(ms / 1000) + 's';
+            const s = Math.round(ms / 100) / 10;
+            return s.toString().replace('.', ',') + ' s';
         }
 
         // ===== Motor del semáforo =====
@@ -347,7 +373,9 @@
             cont.innerHTML = order.map((key, i) => {
                 const dur = formatearSegundos(duraciones[key]);
                 const cls = i === faseActualIdx ? 'chip active' : 'chip';
-                return `<span class="${cls}" style="background:${phasesConfig[key].dot}">${phasesConfig[key].label} ${dur}</span>`;
+                // Texto oscuro sobre fondo amarillo: blanco no se lee ahí.
+                const fg = key === 'amarillo' ? 'color:#111;text-shadow:none;' : '';
+                return `<span class="${cls}" style="background:${phasesConfig[key].dot};${fg}">${phasesConfig[key].label} ${dur}</span>`;
             }).join('');
         }
 
@@ -359,7 +387,14 @@
             const state = document.getElementById('stateText');
             const timer = document.getElementById('timerText');
 
-            if (!syncTime || duracionCiclo === 0) return;
+            if (!syncTime || duracionCiclo === 0) {
+                // Estado vacío con guía en vez de "--" congelado.
+                state.innerText = 'Sin sincronizar';
+                timer.innerText = '--';
+                document.getElementById('windowStatus').innerText =
+                    (syncTime && duracionCiclo === 0) ? 'Sin tiempos válidos: mide de nuevo con la cámara' : '';
+                return;
+            }
 
             const tiempoTranscurrido = (Date.now() - syncTime) % duracionCiclo;
             let acumulado = 0;
@@ -369,11 +404,11 @@
                 const key = order[i];
                 acumulado += duraciones[key];
                 if (tiempoTranscurrido < acumulado) {
-                    const restante = Math.ceil((acumulado - tiempoTranscurrido) / 1000);
+                    const restante = Math.ceil((acumulado - tiempoTranscurrido) / 1000) + ' s';
                     const cfg = phasesConfig[key];
                     box.className = 'light-display ' + cfg.className;
                     state.innerText = cfg.label;
-                    timer.innerText = restante + 's';
+                    timer.innerText = restante;
                     faseActualIdx = i;
                     break;
                 }
@@ -444,7 +479,7 @@
 
             if (enVentana) {
                 const segundosRestantes = Math.ceil((enVentana[1] - tiempoTranscurrido) / 1000);
-                status.innerText = `¡BAJA AHORA! ${segundosRestantes}s`;
+                status.innerText = `¡Baja ahora! Quedan ${segundosRestantes} s`;
                 alertaDisparada = false;
             } else {
                 let mejorEspera = null;
@@ -453,8 +488,8 @@
                     if (espera < 0) espera += duracionCiclo;
                     if (mejorEspera === null || espera < mejorEspera) mejorEspera = espera;
                 });
-                const segundosEspera = mejorEspera !== null ? Math.ceil(mejorEspera / 1000) : '--';
-                status.innerText = `Espera ${segundosEspera}s para bajar`;
+                const segundosEspera = mejorEspera !== null ? Math.ceil(mejorEspera / 1000) + ' s' : '--';
+                status.innerText = `Espera ${segundosEspera} para bajar`;
                 if (mejorEspera !== null && mejorEspera <= 5000 && !alertaDisparada) {
                     alertaDisparada = true;
                     dispararAlerta();
