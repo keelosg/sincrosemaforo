@@ -12,7 +12,7 @@
     /* ===== Zona superior: cámara, ocupa el espacio restante (~2/3) ===== */
     .camara-zone { flex: 2 1 0; min-height: 0; position: relative; background: #000; }
     .video-wrap { position: relative; width: 100%; height: 100%; overflow: hidden; }
-    video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: center; }
     canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     h2 { position: absolute; top: 8px; left: 56px; right: 12px; margin: 0; font-size: 0.95em; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
     .sub { position: absolute; top: 32px; left: 56px; right: 12px; font-size: 0.7em; color: #ddd; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
@@ -190,11 +190,14 @@
     // Los rojos LED o desgastados salen anaranjados/rosados en la cámara:
     // se amplía el rango del ROJO hacia el naranja (hue 0-40) y al magenta
     // (300-360), y el AMARILLO real queda desde ~41 en adelante.
+    // El VERDE se estrecha a 75-160 para no tragar cianes/azules (reflejos,
+    // carteles). Los hue fuera de bandas (70-72, 160-300) no votan: cuentan
+    // como "sin color" en vez de adivinar.
     const HUES = [
         { key: 'rojo',     min: 300, max: 360 },
         { key: 'rojo',     min: 0,   max: 40 },
         { key: 'amarillo', min: 41,  max: 70 },
-        { key: 'verde',    min: 72,  max: 185 }
+        { key: 'verde',    min: 75,  max: 160 }
     ];
 
     function clasificarPixeles(sctx, x, y, w, h) {
@@ -208,7 +211,9 @@
         let lit = 0;
         for (let i = 0; i < data.length; i += 8) {
             const hsv = rgbToHsv(data[i], data[i + 1], data[i + 2]);
-            if (hsv.s >= 0.18 && hsv.v >= 0.18) {
+            // Solo píxeles bien iluminados y saturados (la luz encendida);
+            // así farolas blancas, cielo y asfalto no votan ni inflan el "lit".
+            if (hsv.s >= 0.30 && hsv.v >= 0.30) {
                 lit++;
                 const hh = (hsv.h + 360) % 360;
                 for (const b of HUES) {
@@ -219,9 +224,15 @@
         return { cnt, lit };
     }
 
-    // Fase del semáforo = color con más píxeles encendidos (si hay suficientes).
-    function fasePorConteo(cnt, minimo) {
+    // Fase del semáforo = color con más píxeles encendidos, con dos exigencias:
+    // 1. Umbral RELATIVO al área muestreada (0,3%, mín. 10 muestras): un nº
+    //    fijo de píxeles confirmaba fase con cualquier ruido en zona G.
+    // 2. Histéresis: el ganador debe superar al segundo por un 30%. Sin
+    //    ganador claro se devuelve null (sin señal) en vez de adivinar:
+    //    más seguro esperar un frame que confirmar un color falso.
+    function fasePorConteo(cnt, totalMuestras) {
         const total = cnt.rojo + cnt.amarillo + cnt.verde;
+        const minimo = Math.max(10, Math.floor(totalMuestras * 0.003));
         if (total < minimo) return null;
         // Un rojo con píxeles anaranjados se apoya en el 40% del amarillo para
         // compensar el tinte de los rojos LED/desgastados (sin robarle el turno a un AMARILLO de verdad que venga solo).
@@ -230,8 +241,10 @@
             amarillo: cnt.amarillo,
             verde: cnt.verde
         };
-        if (puntaje.rojo >= puntaje.amarillo) return puntaje.rojo >= puntaje.verde ? 'rojo' : 'verde';
-        return puntaje.amarillo >= puntaje.verde ? 'amarillo' : 'verde';
+        const orden = Object.entries(puntaje).sort((a, b) => b[1] - a[1]);
+        const segundo = orden[1][1];
+        if (segundo > 0 && orden[0][1] < segundo * 1.3) return null;
+        return orden[0][0];
     }
 
     function agregarLog(mensaje) {
@@ -263,11 +276,12 @@
     }
 
     // ===== Zoom =====
-    // Se agranda solo la VISTA (video) para encuadrar fácil. El recuadro de
-    // detección y el muestreo quedan FIJOS: el zoom no descoloca ni baja la
-    // precisión de la zona.
+    // Con zoom ÓPTICO la imagen ya viene agrandada del sensor: no se re-escala
+    // por CSS (duplicaría el zoom en pantalla y descolgaría la guía de la zona
+    // realmente analizada). El escalado CSS solo se usa cuando no hay óptico,
+    // y el mapeo pantalla->nativo lo deshace (ver pantallaANativo).
     function aplicarZoomVista() {
-        video.style.transform = 'scale(' + zoomActual + ')';
+        video.style.transform = trackZoom ? '' : 'scale(' + zoomActual + ')';
         actualizarNivelZoom();
     }
 
@@ -303,8 +317,12 @@
     // Auto-zoom: agranda la vista cuando la luz de la guía es muy pequeña
     // (p. ej. un semáforo a 4 m). Un paso cada ~350ms hasta que la luz tenga
     // tamaño suficiente o se llegue al máximo. Los botones +/− siguen estando.
-    function autoAcercar(litPixeles, guiaPixeles) {
-        if (!litPixeles) return;
+    function autoAcercar(analisis, guiaPixeles) {
+        const litPixeles = analisis.lit;
+        const colorPixeles = analisis.cnt.rojo + analisis.cnt.amarillo + analisis.cnt.verde;
+        // Sin píxeles del color del semáforo a la vista no se acerca a ciegas
+        // (evita irse a zoom máx. de noche por farolas o ruido).
+        if (!litPixeles || !colorPixeles) return;
         if (appState !== 'calibrando' && appState !== 'esperando_fin_verde') return;
         const ahora = Date.now();
         if (ahora - ultimoAutoZoom < 350) return;
@@ -441,29 +459,51 @@
         const offsetY = (altoMostrado - overlay.height) / 2;
 
         function pantallaANativo(px, py) {
+            // Si la vista está agrandada por CSS (sin zoom óptico), la guía en
+            // pantalla no coincide 1:1 con el frame: se deshace la escala
+            // centrada antes de mapear a píxeles nativos.
+            let cx = px, cy = py;
+            if (!trackZoom && zoomActual > 1) {
+                cx = (px - overlay.width / 2) / zoomActual + overlay.width / 2;
+                cy = (py - overlay.height / 2) / zoomActual + overlay.height / 2;
+            }
             return {
-                x: (px + offsetX) / escalaCover,
-                y: (py + offsetY) / escalaCover
+                x: (cx + offsetX) / escalaCover,
+                y: (cy + offsetY) / escalaCover
             };
         }
 
         function zonaEnPixeles() {
             const p1 = pantallaANativo(guiaX, guiaY);
             const p2 = pantallaANativo(guiaX + guiaW, guiaY + guiaH);
-            return { x: p1.x, y: p1.y, w: p2.x - p1.x, h: p2.y - p1.y };
+            // Recorta a los bordes del frame: con zoom CSS alto la guía puede
+            // asomar fuera de lo visible (getImageData devuelve ceros ahí).
+            const x = Math.max(0, Math.min(p1.x, sampleCanvas.width));
+            const y = Math.max(0, Math.min(p1.y, sampleCanvas.height));
+            return {
+                x, y,
+                w: Math.max(0, Math.min(p2.x, sampleCanvas.width) - x),
+                h: Math.max(0, Math.min(p2.y, sampleCanvas.height) - y)
+            };
         }
 
         const z = zonaEnPixeles();
         const analisis = clasificarPixeles(sctx, z.x, z.y, z.w, z.h);
 
-        zonaEls.rojo.className = 'zona' + (analisis.cnt.rojo > 0 ? ' on-rojo' : '');
-        zonaEls.amarillo.className = 'zona' + (analisis.cnt.amarillo > 0 ? ' on-amarillo' : '');
-        zonaEls.verde.className = 'zona' + (analisis.cnt.verde > 0 ? ' on-verde' : '');
+        // Nº de muestras analizadas (se muestrea 1 de cada 2 px): base del umbral relativo.
+        const totalMuestras = Math.max(1, Math.floor((z.w * z.h) / 2));
+        const faseDetectada = fasePorConteo(analisis.cnt, totalMuestras);
+
+        // Los chips muestran la fase DETECTADA (con umbral + histéresis), no el
+        // conteo crudo: así no parpadean con ruido de unos pocos píxeles.
+        zonaEls.rojo.className = 'zona' + (faseDetectada === 'rojo' ? ' on-rojo' : '');
+        zonaEls.amarillo.className = 'zona' + (faseDetectada === 'amarillo' ? ' on-amarillo' : '');
+        zonaEls.verde.className = 'zona' + (faseDetectada === 'verde' ? ' on-verde' : '');
 
         // Auto-zoom: si la luz ocupa muy poco de la guía, agrandar la vista (zoom
         // óptico si existe, si no escalado de pantalla). Hasta que la luz tenga
         // tamaño suficiente o se llegue al máximo.
-        autoAcercar(analisis.lit, z.w * z.h);
+        autoAcercar(analisis, z.w * z.h);
 
         const chipEstable = document.getElementById('chipEstable');
         if (faseConfirmadaActual) {
@@ -473,8 +513,6 @@
         } else {
             chipEstable.innerText = appState === 'calibrando' ? '🟠 Buscando semáforo…' : '🟡 Casi listo…';
         }
-
-        const faseDetectada = fasePorConteo(analisis.cnt, 2);
 
         if (faseDetectada) {
             ultimaDeteccion = Date.now();
