@@ -25,12 +25,21 @@
             --verde: #388e3c;
             --flecha: #00897b;
         }
-        body { background: var(--bg); color: var(--text); margin: 0; text-align: center; transition: background 0.25s; }
+        body {
+            background:
+                radial-gradient(120% 55% at 50% 0%, rgba(0,230,118,0.12), transparent 60%),
+                linear-gradient(180deg, #0b1020 0%, var(--bg) 70%);
+            background-color: var(--bg);
+            color: var(--text); margin: 0; text-align: center; transition: background 0.25s;
+        }
         body.light {
             --bg: #f2f2f2; --card-bg: #ffffff; --border: #cccccc;
             --text: #111111; --dim: #555555; --faint: #666666;
             --btn-bg: #e0e0e0; --btn-fg: #111111;
             --muted-bg: #dddddd; --muted-fg: #5a5a5a;
+            background:
+                radial-gradient(120% 50% at 50% 0%, rgba(0,137,123,0.14), transparent 60%),
+                linear-gradient(180deg, #ffffff 0%, #e9eef4 100%);
         }
         body.light .btn-ajustes { color: #555; }
         .hidden { display: none !important; }
@@ -47,12 +56,26 @@
         #btnCam {
             width: 100%; max-width: 420px; padding: 34px 20px;
             font-size: 1.55em; font-weight: 900; border-radius: 16px;
-            background: var(--accent); color: #000;
-            box-shadow: 0 8px 26px rgba(0,230,118,0.35);
+            background: linear-gradient(180deg, #2bff8f 0%, var(--accent) 45%, #00b35c 100%);
+            color: #000;
+            box-shadow: 0 8px 26px rgba(0,230,118,0.40), inset 0 1px 0 rgba(255,255,255,0.55);
+            border: 1px solid rgba(0,0,0,0.25);
         }
+        #btnCam:active { transform: scale(0.98); }
         .hint { color: var(--faint); font-size: 0.85em; max-width: 360px; margin: 18px auto 6px; line-height: 1.5; }
         .btn-ajustes { background: transparent; color: var(--dim); font-size: 0.95em; padding: 12px; margin-top: 20px; min-height: 48px; }
-        .card { background: var(--card-bg); border-radius: 14px; padding: 16px; max-width: 420px; width: 100%; margin-top: 12px; }
+        .card {
+            background: rgba(255,255,255,0.06);
+            -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            border-radius: 14px; padding: 16px; max-width: 420px; width: 100%; margin-top: 12px;
+        }
+        body.light .card {
+            background: rgba(255,255,255,0.78);
+            border-color: rgba(0,0,0,0.08);
+            box-shadow: 0 8px 24px rgba(20,40,60,0.12);
+        }
 
         /* Guía de 3 pasos en home */
         .pasos { text-align: left; }
@@ -61,7 +84,9 @@
             flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%;
             background: var(--accent); color: #000; font-weight: 900;
             display: flex; align-items: center; justify-content: center; font-size: 0.9em;
+            box-shadow: 0 0 12px rgba(0,230,118,0.55);
         }
+        .brand .ico svg { display: block; margin: 0 auto; filter: drop-shadow(0 6px 18px rgba(0,230,118,0.25)); }
 
         /* Toggles de Ajustes */
         .toggle-row { display: flex; flex-direction: column; gap: 8px; }
@@ -74,11 +99,11 @@
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             padding: 18px 16px 22px; transition: background 0.25s;
         }
-        .bg-rojo { background: var(--rojo); color: #fff; }
-        .bg-amarillo { background: var(--amarillo); color: #111; }
-        .bg-verde { background: var(--verde); color: #fff; }
-        .bg-flecha { background: var(--flecha); color: #fff; }
-        .bg-off { background: #191919; color: #888; }
+        .bg-rojo { background: linear-gradient(160deg, #3d0a0a 0%, var(--rojo) 70%); color: #fff; }
+        .bg-amarillo { background: linear-gradient(160deg, #4a3800 0%, var(--amarillo) 70%); color: #111; }
+        .bg-verde { background: linear-gradient(160deg, #0a2e1a 0%, var(--verde) 70%); color: #fff; }
+        .bg-flecha { background: linear-gradient(160deg, #06302b 0%, var(--flecha) 70%); color: #fff; }
+        .bg-off { background: radial-gradient(100% 60% at 50% 0%, #232323 0%, #191919 70%); color: #888; }
 
         #cronoTop { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
         .order-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -96,8 +121,13 @@
 
         .crono-centro { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .state-text { font-size: 2.6em; font-weight: 900; text-shadow: 0 3px 10px rgba(0,0,0,0.55); letter-spacing: 2px; }
-        .timer-text { font-size: 7em; font-weight: 900; line-height: 1; text-shadow: 0 4px 16px rgba(0,0,0,0.5); }
-        .window-status { font-size: 1.2em; font-weight: 900; padding: 12px 20px; border-radius: 999px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); background: rgba(0,0,0,0.35); }
+        .timer-text { font-size: 7em; font-weight: 900; line-height: 1; text-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 34px rgba(255,255,255,0.28); }
+        .window-status {
+            font-size: 1.2em; font-weight: 900; padding: 12px 20px; border-radius: 999px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5); background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.25);
+            -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+        }
 
         .bajada-wrap { width: 100%; max-width: 420px; }
         .bajada-label { font-size: 0.8em; font-weight: 700; color: rgba(255,255,255,0.85); text-shadow: 0 1px 3px rgba(0,0,0,0.5); margin-bottom: 6px; }
@@ -106,7 +136,11 @@
         .bajada-value { font-size: 3em; font-weight: 900; text-shadow: 0 3px 10px rgba(0,0,0,0.5); }
 
         .upcoming { width: 100%; max-width: 420px; display: flex; gap: 10px; }
-        .upcoming-item { flex: 1; background: rgba(0,0,0,0.35); border-radius: 14px; padding: 10px; }
+        .upcoming-item {
+            flex: 1; background: rgba(255,255,255,0.07); border-radius: 14px; padding: 10px;
+            border: 1px solid rgba(255,255,255,0.14);
+            -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+        }
         .upcoming-item .u-label { font-size: 0.78em; color: rgba(255,255,255,0.85); }
         .upcoming-item .u-name { font-weight: 900; margin-top: 2px; }
         .upcoming-item .u-dur { font-size: 0.85em; opacity: 0.9; }
@@ -117,7 +151,7 @@
         .safe-label { font-size: 0.78em; font-weight: 700; color: rgba(255,255,255,0.85); text-shadow: 0 1px 3px rgba(0,0,0,0.5); margin: 6px 0 4px; }
         .safe-bar { position: relative; height: 16px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.25); }
         .depart-zone { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, rgba(255,224,130,0.95), rgba(255,224,130,0.95) 4px, rgba(255,183,77,0.95) 4px, rgba(255,183,77,0.95) 8px); }
-        .playhead { position: absolute; top: -4px; bottom: -4px; width: 4px; background: #fff; border-radius: 2px; box-shadow: 0 0 8px 3px rgba(255,255,255,0.9); transition: left 0.15s linear; z-index: 2; }
+        .playhead { position: absolute; top: -4px; bottom: -4px; width: 4px; background: #fff; border-radius: 2px; box-shadow: 0 0 12px 4px rgba(255,255,255,0.9); transition: left 0.15s linear; z-index: 2; }
 
         /* ===== LOCKSCREEN: misma crono, sin controles, número enorme ===== */
         body.bloqueado #homeView,
@@ -137,7 +171,16 @@
     <!-- ===== HOME: un botón ===== -->
     <div id="homeView">
         <div class="brand">
-            <div class="ico">🚦</div>
+            <div class="ico" aria-hidden="true">
+                <svg width="72" height="118" viewBox="0 0 72 118" role="presentation">
+                    <rect x="5" y="3" width="62" height="112" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.30)" stroke-width="2"/>
+                    <circle cx="36" cy="29" r="11" fill="#d32f2f" opacity="0.35"/>
+                    <circle cx="36" cy="59" r="11" fill="#fbc02d" opacity="0.35"/>
+                    <ellipse cx="36" cy="89" rx="19" ry="19" fill="#00e676" opacity="0.22"/>
+                    <circle cx="36" cy="89" r="11" fill="#00e676"/>
+                    <circle cx="32.5" cy="85.5" r="3.5" fill="#ffffff" opacity="0.55"/>
+                </svg>
+            </div>
             <h1>SincroSemáforo</h1>
             <p class="tagline">Enfoca, mide y corre</p>
         </div>
