@@ -23,6 +23,12 @@
     /* ===== Zona superior: cámara, ocupa el espacio restante (~2/3) ===== */
     .camara-zone { flex: 2 1 0; min-height: 0; position: relative; background: #000; }
     .video-wrap { position: relative; width: 100%; height: 100%; overflow: hidden; }
+    /* Scrims: placa degradada tras título y chip para leer al sol */
+    .video-wrap::before, .video-wrap::after {
+        content: ''; position: absolute; left: 0; right: 0; z-index: 1; pointer-events: none;
+    }
+    .video-wrap::before { top: 0; height: 96px; background: linear-gradient(180deg, rgba(0,0,0,0.65), transparent); }
+    .video-wrap::after { bottom: 0; height: 76px; background: linear-gradient(0deg, rgba(0,0,0,0.65), transparent); }
     video { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: center; }
     canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     h2 { position: absolute; top: 8px; left: 56px; right: 12px; margin: 0; font-size: 0.95em; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
@@ -32,10 +38,64 @@
     .zoom-btn { width: 48px; height: 48px; padding: 0; margin: 0; border-radius: 50%; font-size: 1.4em; font-weight: 700; background: rgba(20,20,20,0.7); color: #fff; border: 1px solid #444; }
     .zoom-nivel { font-size: 0.65em; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
 
-    .estado-chip { position: absolute; bottom: 10px; left: 10px; z-index: 3; font-size: 0.78em; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.95); background: rgba(20,20,20,0.6); padding: 6px 10px; border-radius: 999px; }
+    /* Chip maestro: píldora glass abajo-centro (alcance visual, sin tapar la guía) */
+    .estado-chip {
+        position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 3;
+        font-size: 0.85em; font-weight: 800; color: #fff; white-space: nowrap;
+        background: rgba(0,0,0,0.75); border: 1px solid rgba(255,255,255,0.22);
+        -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+        padding: 8px 16px; border-radius: 999px;
+    }
 
-    /* ===== Zona inferior: controles, fijada a ~1/3 de la pantalla con scroll ===== */
-    .controles-zone { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 10px 12px; }
+    /* ===== Zona inferior: altura fija SIN scroll (modo apuntar) ===== */
+    .controles-zone { flex: 0 0 auto; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); }
+
+    /* Estado único gigante */
+    .sync-estado {
+        text-align: center; padding: 10px 12px; border-radius: 14px;
+        background: rgba(0,0,0,0.75); border: 1px solid rgba(255,255,255,0.16);
+        -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    }
+    body.light .sync-estado { background: rgba(0,0,0,0.82); }
+    .sync-fase { font-size: 1.5em; font-weight: 900; color: #fff; }
+    .sync-sub { font-size: 0.85em; font-weight: 700; color: #ddd; margin-top: 2px; }
+    .sync-segs { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+    .sync-segs span { width: 44px; height: 8px; border-radius: 999px; background: #333; }
+    .sync-segs span.on { background: #00e676; box-shadow: 0 0 10px rgba(0,230,118,0.8); }
+
+    /* Barra de pulgar: cancelar + zoom */
+    .thumb-bar { display: flex; gap: 10px; margin-top: 10px; }
+    .thumb-btn {
+        flex: 1; min-height: 64px; margin-top: 0; font-size: 1.5em; border-radius: 16px;
+        background: #2a2a2a; color: #fff; border: 1px solid #444;
+    }
+    .thumb-btn.danger { background: #d32f2f; border-color: #d32f2f; }
+
+    /* Acordeón de detalle (medidas, log, recuadro) */
+    details.detalle { margin-top: 10px; border-radius: 14px; background: #1e1e1e; border: 1px solid #333; }
+    body.light details.detalle { background: #ffffff; border-color: #ddd; }
+    details.detalle summary { padding: 12px 14px; min-height: 48px; font-weight: 800; cursor: pointer; color: #aaa; }
+    body.light details.detalle summary { color: #444; }
+    details.detalle .detalle-body { padding: 0 10px 10px; }
+    .zona-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .zona-row .zoom-nivel { font-size: 0.85em; color: #aaa; }
+    #btnZona { width: auto; flex: 1; margin-top: 0; }
+
+    /* Overlay de sincronización celebrada */
+    .sync-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 20;
+        display: flex; align-items: center; justify-content: center; padding: 24px;
+        background: rgba(0,0,0,0.85);
+        -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    }
+    .sync-card {
+        text-align: center; padding: 32px 28px; border-radius: 20px; max-width: 420px; width: 100%;
+        background: rgba(255,255,255,0.06); border: 2px solid #00e676;
+        box-shadow: 0 0 40px rgba(0,230,118,0.35);
+    }
+    .sync-big { font-size: 3.5em; }
+    .sync-title { font-size: 1.6em; font-weight: 900; color: #fff; margin-top: 8px; }
+    .sync-tiempo { font-size: 3em; font-weight: 900; color: #00e676; margin: 8px 0 16px; }
 
     .card { background: #1e1e1e; padding: 10px; border-radius: 14px; margin-top: 8px; text-align: left; }
     button { width: 100%; padding: 10px; min-height: 48px; border-radius: 14px; border: none; font-size: 0.9em; font-weight: bold; cursor: pointer; margin-top: 6px; }
@@ -57,15 +117,17 @@
     .zona.on-verde .dot { background: #388e3c; box-shadow: 0 0 8px #388e3c; }
     .zona .lbl { font-size: 0.65em; color: #888; display: block; }
     .medidas { display: flex; gap: 6px; margin-top: 6px; }
-    .medida { flex: 1; text-align: center; padding: 4px 6px; border-radius: 8px; background: #1a1a1a; font-size: 0.72em; color: #aaa; }
-    .medida .val { font-size: 1.2em; font-weight: 800; color: #fff; font-family: Consolas, monospace; }
-    .medida .lbl { font-size: 0.6em; color: #666; display: block; }
-    .log { font-size: 0.68em; color: #888; margin-top: 6px; max-height: 70px; overflow-y: auto; text-align: left; line-height: 1.4; }
+    .medida { flex: 1; text-align: center; padding: 6px; border-radius: 8px; background: #1a1a1a; font-size: 0.72em; color: #ccc; }
+    .medida .val { font-size: 1.6em; font-weight: 800; color: #fff; }
+    .medida .lbl { font-size: 0.68em; color: #aaa; display: block; }
+    body.light .medida { color: #333; }
+    body.light .medida .lbl { color: #444; }
+    .log { font-size: 0.8em; color: #ddd; margin-top: 6px; max-height: 70px; overflow-y: auto; text-align: left; line-height: 1.4; }
+    body.light .log { color: #333; }
     .resultado table { width: 100%; border-collapse: collapse; font-size: 0.82em; margin-top: 6px; }
     .resultado td { padding: 4px; border-bottom: 1px solid #333; }
     .resultado td:first-child { font-weight: bold; }
     .nota { font-size: 0.68em; color: #666; margin-top: 8px; }
-    .copiable { background: #2a2a2a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 0.72em; margin-top: 6px; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -78,45 +140,54 @@
     <button class="btn-atras" onclick="window.location.href='index.html'" aria-label="Volver al inicio">‹</button>
     <h2>🔵 Calibración: apunta y espera</h2>
     <div class="sub">Mete la luz del semáforo dentro del recuadro (no hace falta exactitud)</div>
-    <div class="zoom-btns" id="zoomBtns">
-        <button class="zoom-btn" onclick="cambiarZoom(1)" aria-label="Acercar imagen">+</button>
-        <div class="zoom-nivel" id="zoomNivel">×1.0</div>
-        <button class="zoom-btn" onclick="cambiarZoom(-1)" aria-label="Alejar imagen">−</button>
-        <div class="zoom-nivel">Zona</div>
-        <button class="zoom-btn" id="btnZona" onclick="cambiarTamanoZona()" aria-label="Tamaño de zona: pequeña">⟦⟧ S</button>
-    </div>
-    <div class="estado-chip" id="chipEstable">🟠 Buscando semáforo…</div>
+    <div class="estado-chip" id="chipEstable">Buscando…</div>
 </div>
 
 <div class="controles-zone">
-    <div class="zonas">
-        <div class="zona" id="zonaRojo"><div class="dot" aria-hidden="true"></div><span class="lbl">Rojo</span></div>
-        <div class="zona" id="zonaAmarillo"><div class="dot" aria-hidden="true"></div><span class="lbl">Amarillo</span></div>
-        <div class="zona" id="zonaVerde"><div class="dot" aria-hidden="true"></div><span class="lbl">Verde</span></div>
+    <div class="sync-estado" aria-live="polite">
+        <div class="sync-fase" id="syncFase">Buscando…</div>
+        <div class="sync-sub" id="syncSub">Encuadra el semáforo</div>
+        <div class="sync-segs" id="syncSegs" aria-hidden="true"><span></span><span></span><span></span></div>
     </div>
 
-    <div class="medidas">
-        <div class="medida"><span class="lbl">Rojo</span><div class="val" id="medRojo">--</div></div>
-        <div class="medida"><span class="lbl">Amarillo</span><div class="val" id="medAmarillo">--</div></div>
-        <div class="medida"><span class="lbl">Verde</span><div class="val" id="medVerde">--</div></div>
-    </div>
-
-    <div class="btn-row">
-        <button id="btnStop" class="btn-stop" onclick="detener()">✖ Cancelar y volver</button>
+    <div class="thumb-bar">
+        <button id="btnStop" class="thumb-btn danger" onclick="detener()" aria-label="Cancelar y volver">✖</button>
+        <button class="thumb-btn" onclick="cambiarZoom(-1)" aria-label="Alejar imagen">−</button>
+        <button class="thumb-btn" onclick="cambiarZoom(1)" aria-label="Acercar imagen">+</button>
     </div>
     <button id="btnReintentar" class="btn-start" style="display:none;" onclick="iniciar()">↻ Reintentar cámara</button>
 
-    <div id="status" class="status status-idle" aria-live="polite">Iniciando cámara...</div>
+    <details class="detalle">
+        <summary>Ver detalle</summary>
+        <div class="detalle-body">
+            <div class="medidas">
+                <div class="medida"><span class="lbl">Rojo</span><div class="val" id="medRojo">--</div></div>
+                <div class="medida"><span class="lbl">Amarillo</span><div class="val" id="medAmarillo">--</div></div>
+                <div class="medida"><span class="lbl">Verde</span><div class="val" id="medVerde">--</div></div>
+            </div>
+            <div class="zona-row">
+                <button id="btnZona" onclick="cambiarTamanoZona()" aria-label="Tamaño de zona: pequeña">Recuadro: pequeña</button>
+                <span class="zoom-nivel" id="zoomNivel">×1.0</span>
+            </div>
+            <div class="card">
+                <label style="font-size:0.75em;color:#aaa;">Detecciones</label>
+                <div class="log" id="log">Encuadra el semáforo...</div>
+            </div>
+            <div id="resultadoCard" class="card" style="display:none;">
+                <label style="font-size:0.75em;color:#aaa;">Ciclo calculado</label>
+                <div class="resultado" id="resultadoTabla"></div>
+                <div class="nota">Sincronizado correctamente. Toca "Ver temporizador" para volver.</div>
+            </div>
+        </div>
+    </details>
+</div>
 
-    <div class="card">
-        <label style="font-size:0.75em;color:#aaa;">Detecciones</label>
-        <div class="log" id="log">Encuadra el semáforo...</div>
-    </div>
-
-    <div id="resultadoCard" class="card" style="display:none;">
-        <label style="font-size:0.75em;color:#aaa;">Ciclo calculado</label>
-        <div class="resultado" id="resultadoTabla"></div>
-        <div class="nota">Sincronizado correctamente. Volviendo a la vista con el temporizador...</div>
+<div id="syncOverlay" class="sync-overlay" style="display:none;">
+    <div class="sync-card">
+        <div class="sync-big">✅</div>
+        <div class="sync-title" id="syncOverlayTitulo">Verde · sincronizado</div>
+        <div class="sync-tiempo" id="syncTiempo">--</div>
+        <button class="btn-start" onclick="volverATemporizador()">Ver temporizador →</button>
     </div>
 </div>
 
@@ -124,11 +195,26 @@
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
     const ctx = overlay.getContext('2d');
-    const statusBox = document.getElementById('status');
     const logBox = document.getElementById('log');
     const resultadoCard = document.getElementById('resultadoCard');
     const resultadoTabla = document.getElementById('resultadoTabla');
-    const zonaEls = { rojo: document.getElementById('zonaRojo'), amarillo: document.getElementById('zonaAmarillo'), verde: document.getElementById('zonaVerde') };
+
+    // Estado maestro único (controles + chip de cámara): solo escribe al DOM
+    // cuando el texto cambia, para no tocar el DOM en cada frame.
+    let ultimoEstadoKey = '';
+    function setEstado(faseTxt, subTxt) {
+        const key = faseTxt + '|' + (subTxt || '');
+        if (key === ultimoEstadoKey) return;
+        ultimoEstadoKey = key;
+        document.getElementById('syncFase').textContent = faseTxt;
+        document.getElementById('syncSub').textContent = subTxt || '';
+        document.getElementById('chipEstable').textContent = subTxt ? faseTxt + ' · ' + subTxt : faseTxt;
+    }
+    function setSegs(n) {
+        const segs = document.getElementById('syncSegs').children;
+        for (let i = 0; i < segs.length; i++) segs[i].classList.toggle('on', i < Math.min(3, n));
+    }
+    let tInicioMedicion = 0;
 
     // Respeta el tema elegido en la app (la zona de cámara siempre es oscura).
     if (localStorage.getItem('temaOscuro') === 'false') document.body.classList.add('light');
@@ -364,7 +450,7 @@
     function cambiarTamanoZona() {
         nivelZona = (nivelZona + 1) % TAMANOS_ZONA.length;
         const btn = document.getElementById('btnZona');
-        btn.textContent = '⟦⟧ ' + NOMBRES_ZONA[nivelZona];
+        btn.textContent = 'Recuadro: ' + NOMBRES_ZONA_LARGO[nivelZona];
         btn.setAttribute('aria-label', 'Tamaño de zona: ' + NOMBRES_ZONA_LARGO[nivelZona]);
     }
 
@@ -431,7 +517,6 @@
                     zoomActual = 1;
                 }
                 aplicarZoomVista();
-                document.getElementById('zoomBtns').style.display = 'flex';
             } catch (e) {}
 
             document.getElementById('btnStop').disabled = false;
@@ -453,29 +538,32 @@
             ultimaDeteccion = Date.now();
             actualizarMedidas();
             appState = 'calibrando';
+            tInicioMedicion = Date.now();
+            ultimoEstadoKey = '';
 
-            statusBox.className = 'status status-calibrando';
-            statusBox.innerText = '🔵 Apunta al semáforo y mantenlo quieto...';
+            setEstado('Calibración', 'Apunta al semáforo y mantenlo quieto');
+            setSegs(0);
             agregarLog('Cámara lista: esperando detectar el semáforo.');
             pedirWakeLockCamara();
 
             requestAnimationFrame(procesarFrame);
         } catch (err) {
-            statusBox.className = 'status status-idle';
-            statusBox.innerText = 'No se pudo acceder a la cámara: ' + err.message +
-                '. Revisa el permiso de cámara del navegador y reintenta.';
+            setEstado('Sin cámara', 'Revisa el permiso y reintenta');
             agregarLog('Error: ' + err.message);
             document.getElementById('btnReintentar').style.display = 'block';
         }
     }
 
     function detener() {
+        // Confirmar si ya hay progreso (ciclo cerrado o >15 s midiendo):
+        // un roce sin querer no debe abortar minutos de medición.
+        const conProgreso = cicloCerrado || (tInicioMedicion && Date.now() - tInicioMedicion > 15000);
+        if (conProgreso && !confirm('¿Cancelar la medición? Se perderá el progreso.')) return;
         liberarWakeLockCamara();
         if (rafId) cancelAnimationFrame(rafId);
         if (stream) stream.getTracks().forEach(t => t.stop());
         appState = 'idle';
-        statusBox.className = 'status status-idle';
-        statusBox.innerText = 'Cámara detenida';
+        setEstado('Detenida', '');
         agregarLog('Cámara detenida.');
         window.location.href = 'index.html';
     }
@@ -502,9 +590,14 @@
             ctx.fillStyle = 'rgba(255,255,255,0.12)';
             ctx.fillRect(guiaX, guiaY, guiaW, guiaH);
         }
+        // Guía con halo neón (visible al sol y a distancia).
+        ctx.save();
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 3;
+        ctx.shadowColor = 'rgba(0,230,118,0.9)';
+        ctx.shadowBlur = 14;
         ctx.strokeRect(guiaX, guiaY, guiaW, guiaH);
+        ctx.restore();
         ctx.fillStyle = 'rgba(255,255,255,0.85)';
         ctx.font = 'bold 13px Arial';
         ctx.textAlign = 'left';
@@ -561,22 +654,19 @@
 
         // Los chips muestran la fase DETECTADA (con umbral + histéresis), no el
         // conteo crudo: así no parpadean con ruido de unos pocos píxeles.
-        zonaEls.rojo.className = 'zona' + (faseDetectada === 'rojo' ? ' on-rojo' : '');
-        zonaEls.amarillo.className = 'zona' + (faseDetectada === 'amarillo' ? ' on-amarillo' : '');
-        zonaEls.verde.className = 'zona' + (faseDetectada === 'verde' ? ' on-verde' : '');
-
         // Auto-zoom: si la luz ocupa muy poco de la guía, agrandar la vista (zoom
         // óptico si existe, si no escalado de pantalla). Hasta que la luz tenga
         // tamaño suficiente o se llegue al máximo.
         autoAcercar(analisis, z.w * z.h);
 
-        const chipEstable = document.getElementById('chipEstable');
+        // Estado en vivo (con guardia anti-DOM: setEstado solo escribe si cambió).
         if (faseConfirmadaActual) {
-            chipEstable.innerText = `🟢 ${cap(faseConfirmadaActual)} · Estable`;
+            setEstado(cap(faseConfirmadaActual),
+                appState === 'esperando_fin_verde' ? 'Ciclo completo' : 'Estable');
         } else if (appState === 'calibrando' && Date.now() - ultimaDeteccion > 4000) {
-            chipEstable.innerText = '🟠 ¿No se ve la luz? Acerca el teléfono o toca +';
+            setEstado('Buscando', '¿No se ve la luz? Acerca con +');
         } else {
-            chipEstable.innerText = appState === 'calibrando' ? '🟠 Buscando semáforo…' : '🟡 Casi listo…';
+            setEstado(appState === 'calibrando' ? 'Buscando' : 'Casi listo', '');
         }
 
         if (faseDetectada) {
@@ -663,6 +753,7 @@
         }
         if (!ordenCiclo.includes(faseTerminada)) ordenCiclo.push(faseTerminada);
         conteoFin[faseTerminada] = (conteoFin[faseTerminada] || 0) + 1;
+        setSegs(ordenCiclo.length);
         actualizarMedidas();
 
         agregarLog(`Transición → ${cap(nuevaFase)} (${cap(faseTerminada)} ${fmtSeg(dur)} s)`);
@@ -688,10 +779,10 @@
         if (cicloCerrado) return;
         cicloCerrado = true;
         mostrarResultado(duracionesFase);
-        agregarLog('🔄 Ciclo completo: la luz de referencia volvió. Sincronizando al próximo cambio de luz...');
+        agregarLog('Ciclo completo: la luz de referencia volvió. Sincronizando al próximo cambio de luz...');
         appState = 'esperando_fin_verde';
-        statusBox.className = 'status status-esperando';
-        statusBox.innerText = '🟡 Ciclo completo. Sincroniza cuando cambie a VERDE...';
+        setEstado('Ciclo completo', 'Sincroniza cuando cambie a verde');
+        setSegs(3);
     }
 
     function mostrarResultado(duraciones) {
@@ -717,11 +808,16 @@
 
     function dispararSincronizacion(timestamp) {
         appState = 'sincronizado';
-        statusBox.className = 'status status-sync';
         const hora = new Date(timestamp).toLocaleTimeString();
-        statusBox.innerText = `✅ Sincronizado en VERDE a las ${hora}`;
+        setEstado('Sincronizado', 'Verde · ' + hora);
+        setSegs(3);
         agregarLog(`>>> SINCRONIZACIÓN DISPARADA a las ${hora} <<<`);
         liberarWakeLockCamara();
+        // Celebración a pantalla completa: el usuario la ve sin bajar la
+        // vista y decide cuándo volver (ya no hay salto automático).
+        document.getElementById('syncOverlayTitulo').innerText = 'Verde · sincronizado';
+        document.getElementById('syncTiempo').innerText = hora;
+        document.getElementById('syncOverlay').style.display = 'flex';
 
         if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
         try {
@@ -774,8 +870,11 @@
         localStorage.setItem('valoresBloqueados', 'true');
         localStorage.setItem('configActualIdApp', '');
         localStorage.setItem('pausado', 'false');
+    }
 
-        setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+    // Retorno manual desde la celebración de sincronización.
+    function volverATemporizador() {
+        window.location.href = 'index.html';
     }
 
     // Ajusta cada fase a precisión de milisegundo (hasta 3 decimales) para que
