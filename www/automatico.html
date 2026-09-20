@@ -185,6 +185,33 @@
 
     const eventLog = [];
 
+    // Pantalla encendida durante la calibración: wake-lock web como refuerzo
+    // explícito al flag nativo keepScreenOn del CI. Respeta el ajuste de la
+    // app (si el usuario apagó "Pantalla encendida", no se solicita).
+    let camWakeLock = null;
+    async function pedirWakeLockCamara() {
+        if (localStorage.getItem('pantallaEncendida') === 'false') return;
+        try {
+            if ('wakeLock' in navigator && !camWakeLock) {
+                camWakeLock = await navigator.wakeLock.request('screen');
+                camWakeLock.addEventListener('release', () => { camWakeLock = null; });
+            }
+        } catch (e) {
+            camWakeLock = null;
+        }
+    }
+    async function liberarWakeLockCamara() {
+        try {
+            if (camWakeLock) await camWakeLock.release();
+        } catch (e) {}
+        camWakeLock = null;
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && (appState === 'calibrando' || appState === 'esperando_fin_verde')) {
+            pedirWakeLockCamara();
+        }
+    });
+
     function rgbToHsv(r, g, b) {
         r /= 255; g /= 255; b /= 255;
         const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -430,6 +457,7 @@
             statusBox.className = 'status status-calibrando';
             statusBox.innerText = '🔵 Apunta al semáforo y mantenlo quieto...';
             agregarLog('Cámara lista: esperando detectar el semáforo.');
+            pedirWakeLockCamara();
 
             requestAnimationFrame(procesarFrame);
         } catch (err) {
@@ -442,6 +470,7 @@
     }
 
     function detener() {
+        liberarWakeLockCamara();
         if (rafId) cancelAnimationFrame(rafId);
         if (stream) stream.getTracks().forEach(t => t.stop());
         appState = 'idle';
@@ -692,6 +721,7 @@
         const hora = new Date(timestamp).toLocaleTimeString();
         statusBox.innerText = `✅ Sincronizado en VERDE a las ${hora}`;
         agregarLog(`>>> SINCRONIZACIÓN DISPARADA a las ${hora} <<<`);
+        liberarWakeLockCamara();
 
         if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
         try {

@@ -119,7 +119,7 @@
             border: 1px solid rgba(255,255,255,0.35);
         }
 
-        .crono-centro { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .crono-centro { display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform 1s ease; }
         .state-text { font-size: 2.6em; font-weight: 900; text-shadow: 0 3px 10px rgba(0,0,0,0.55); letter-spacing: 2px; }
         .timer-text { font-size: 7em; font-weight: 900; line-height: 1; text-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 34px rgba(255,255,255,0.28); }
         .window-status {
@@ -155,12 +155,13 @@
 
         /* ===== LOCKSCREEN: misma crono, sin controles, número enorme ===== */
         body.bloqueado #homeView,
-        body.bloqueado .bajada-wrap,
         body.bloqueado #btnPausarMini,
-        body.bloqueado #cronoTop .order-chips { display: none !important; }
+        body.bloqueado #cronoTop .order-chips,
+        body.bloqueado .stepper-btn { display: none !important; }
         body.bloqueado #lightBox { padding-bottom: 40px; }
         body.bloqueado .timer-text { font-size: 9em; }
         body.bloqueado #cronoTop { justify-content: flex-end; }
+        body.bloqueado .bajada-stepper { justify-content: center; }
 
         /* ===== Pantalla emergente de instrucciones ===== */
         
@@ -198,6 +199,7 @@
                 <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: activado</button>
                 <button id="btnVibracion" class="toggle-btn" onclick="toggleVibracion()">📳 Vibración: activada</button>
                 <button id="btnTema" class="toggle-btn" onclick="alternarTema()">🌙 Tema: oscuro</button>
+                <button id="btnPantalla" class="toggle-btn" onclick="togglePantalla()">💡 Pantalla encendida: sí</button>
             </div>
         </div>
     </div>
@@ -301,6 +303,11 @@
         }
 
         function dispararAlerta() {
+            // Si el teléfono durmió a mitad de la catarata, los setTimeout
+            // pendientes se disparan todos juntos al despertar: cada pulso
+            // verifica que no llegue con más de 3 s de atraso y si no, se salta.
+            const t0 = Date.now();
+            const aTiempo = (delay) => (Date.now() - (t0 + delay)) <= 3000;
             if (vibracionActivada) {
                 const pulsos = [
                     { delay: 0,    dur: 100 },
@@ -309,7 +316,7 @@
                     { delay: 3000, dur: 550 },
                     { delay: 4000, dur: 700 }
                 ];
-                pulsos.forEach(p => setTimeout(() => vibrarNativo(p.dur), p.delay));
+                pulsos.forEach(p => setTimeout(() => { if (aTiempo(p.delay)) vibrarNativo(p.dur); }, p.delay));
             }
             if (sonidoActivado) {
                 const beeps = [
@@ -319,7 +326,7 @@
                     { delay: 3000, freq: 784, dur: 300,  vol: 0.30 },
                     { delay: 4000, freq: 988, dur: 1000, vol: 0.35 }
                 ];
-                beeps.forEach(b => setTimeout(() => reproducirBeep(b.freq, b.dur, b.vol), b.delay));
+                beeps.forEach(b => setTimeout(() => { if (aTiempo(b.delay)) reproducirBeep(b.freq, b.dur, b.vol); }, b.delay));
             }
         }
 
@@ -350,6 +357,38 @@
             btnSonido.classList.toggle('off', !sonidoActivado);
             btnVibracion.innerText = `📳 Vibración: ${vibracionActivada ? 'activada' : 'desactivada'}`;
             btnVibracion.classList.toggle('off', !vibracionActivada);
+            const btnPantalla = document.getElementById('btnPantalla');
+            if (btnPantalla) {
+                btnPantalla.innerText = `💡 Pantalla encendida: ${pantallaEncendida ? 'sí' : 'no'}`;
+                btnPantalla.classList.toggle('off', !pantallaEncendida);
+            }
+        }
+
+        // ===== Pantalla encendida (wake lock web + flag nativo del CI) =====
+        let pantallaEncendida = localStorage.getItem('pantallaEncendida') !== 'false';
+        let wakeLock = null;
+
+        function togglePantalla() {
+            pantallaEncendida = !pantallaEncendida;
+            localStorage.setItem('pantallaEncendida', pantallaEncendida);
+            actualizarBotonesToggle();
+            gestionarWakeLock();
+        }
+
+        async function gestionarWakeLock() {
+            const debe = pantallaEncendida && syncTime && !pausado;
+            if (!('wakeLock' in navigator)) return;
+            try {
+                if (debe && !wakeLock) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => { wakeLock = null; });
+                } else if (!debe && wakeLock) {
+                    await wakeLock.release();
+                    wakeLock = null;
+                }
+            } catch (e) {
+                wakeLock = null;
+            }
         }
 
         // ===== Tema =====
@@ -392,6 +431,8 @@
 
         // ===== Motor del semáforo =====
         let intervaloSemaforo = null;
+        let ultimoShiftBurnIn = 0;
+        let shiftBurnIn = 0;
 
         function iniciarIntervalo() {
             if (!intervaloSemaforo) intervaloSemaforo = setInterval(actualizarSemaforo, 200);
@@ -423,6 +464,9 @@
         }
 
         function actualizarSemaforo() {
+            // Puente lockscreen: la marca nativa cambia al bloquear/desbloquear;
+            // se re-lee en cada tick (<200 ms de reacción).
+            actualizarEstadoBloqueo();
             const duraciones = obtenerDuraciones();
             const duracionCiclo = order.reduce((sum, key) => sum + duraciones[key], 0);
 
@@ -468,6 +512,24 @@
             document.getElementById('afterDur').innerText = formatearSegundos(duraciones[order[despuesIdx]]);
 
             actualizarTemporizadorLineal(duraciones, duracionCiclo, tiempoTranscurrido);
+            aplicarAntiBurnIn();
+        }
+
+        // Anti burn-in OLED: micro-desplazamiento del centro cada 60 s
+        // solo en lockscreen (imperceptible, protege el panel).
+        function aplicarAntiBurnIn() {
+            const centro = document.querySelector('.crono-centro');
+            if (!centro) return;
+            if (document.body.classList.contains('bloqueado')) {
+                if (Date.now() - ultimoShiftBurnIn > 60000) {
+                    ultimoShiftBurnIn = Date.now();
+                    shiftBurnIn = shiftBurnIn === 1 ? -1 : 1;
+                    centro.style.transform = `translate(${6 * shiftBurnIn}px, ${4 * shiftBurnIn}px)`;
+                }
+            } else if (shiftBurnIn !== 0) {
+                shiftBurnIn = 0;
+                centro.style.transform = '';
+            }
         }
 
         function actualizarTemporizadorLineal(duraciones, duracionCiclo, tiempoTranscurrido) {
@@ -607,6 +669,8 @@
             const activo = syncTime && !pausado;
             document.getElementById('homeView').classList.toggle('hidden', activo);
             document.getElementById('cronoView').classList.toggle('hidden', !activo);
+            actualizarEstadoBloqueo();
+            gestionarWakeLock();
         }
 
         // ===== Cámara =====
@@ -638,7 +702,28 @@
                     window.Capacitor.Plugins.App.exitApp();
                 }
             });
+            // Al volver del fondo o de pantalla apagada: refrescar puente
+            // lockscreen y cuenta de inmediato (el intervalo pudo pausarse).
+            window.Capacitor.Plugins.App.addListener('resume', () => {
+                actualizarEstadoBloqueo();
+                if (syncTime && !pausado) {
+                    iniciarIntervalo();
+                    actualizarSemaforo();
+                }
+            });
         }
+
+        // Fallback web del resume: al volver visible la pestaña/WebView.
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                actualizarEstadoBloqueo();
+                gestionarWakeLock();
+                if (syncTime && !pausado) {
+                    iniciarIntervalo();
+                    actualizarSemaforo();
+                }
+            }
+        });
 
         actualizarEstadoBloqueo();
     </script>
