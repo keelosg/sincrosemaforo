@@ -63,6 +63,8 @@
         }
         #btnCam:active { transform: scale(0.98); }
         .hint { color: var(--faint); font-size: 0.85em; max-width: 360px; margin: 18px auto 6px; line-height: 1.5; }
+        .home-secundarios { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+        .home-secundarios .btn-ajustes { margin-top: 0; }
         .btn-ajustes { background: transparent; color: var(--dim); font-size: 0.95em; padding: 12px; margin-top: 20px; min-height: 48px; }
         .card {
             background: rgba(255,255,255,0.06);
@@ -193,7 +195,10 @@
             <div class="paso"><span class="paso-n">2</span> Mantén el teléfono quieto una vuelta completa</div>
             <div class="paso"><span class="paso-n">3</span> La cuenta atrás arranca sola en verde</div>
         </div>
-        <button class="btn-ajustes" onclick="toggleAjustes()" aria-expanded="false" id="btnAjustesToggle">⚙ Ajustes</button>
+        <div class="home-secundarios">
+            <button class="btn-ajustes" onclick="toggleAjustes()" aria-expanded="false" id="btnAjustesToggle">⚙ Ajustes</button>
+            <button class="btn-ajustes" onclick="window.location.href='medir.html'">📍 Medir distancia</button>
+        </div>
         <div id="ajustesCard" class="card hidden">
             <div class="toggle-row">
                 <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: activado</button>

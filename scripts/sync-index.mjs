@@ -32,3 +32,4 @@ function syncFile(name) {
 
 syncFile("index.html");
 syncFile("automatico.html");
+syncFile("medir.html");

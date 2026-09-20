@@ -13,8 +13,9 @@ sincrosemaforo/
 ├── resources/icon.png                # icono fuente para @capacitor/assets
 ├── scripts/sync-index.mjs            # copia src/*.html -> www/
 ├── src/                              # FUENTE DE VERDAD del HTML
-│   ├── index.html
-│   └── automatico.html
+│   ├── index.html                # home + crono
+│   ├── automatico.html           # calibración con cámara
+│   └── medir.html                # medición GPS de distancia al semáforo
 ├── www/                              # assets que empaqueta Capacitor (generados)
 ├── capacitor.config.json
 └── package.json
@@ -49,6 +50,7 @@ npm run android:build   # genera android/app/build/outputs/apk/debug/app-debug.a
 ## Compilar el APK (CI)
 
 Cada push a `main` o `pruebas` dispara `.github/workflows/build-apk.yml`, que:
-compila con Gradle, parchea el `AndroidManifest` y `MainActivity` (mostrar sobre
-lock screen + bloquear toda interacción mientras está bloqueado) y sube el APK
-como artifact del run.
+compila con Gradle, parchea el `AndroidManifest` (lock screen + permisos de
+cámara, vibración y ubicación) y `MainActivity` (mostrar sobre lock screen +
+bloquear toda interacción mientras está bloqueado) y sube el APK como artifact
+del run.

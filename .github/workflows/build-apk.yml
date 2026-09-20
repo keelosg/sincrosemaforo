@@ -32,6 +32,8 @@ jobs:
           MANIFEST=android/app/src/main/AndroidManifest.xml
           sed -i '/<manifest /a\    <uses-permission android:name="android.permission.VIBRATE" />' "$MANIFEST"
           sed -i '/<manifest /a\    <uses-permission android:name="android.permission.CAMERA" />' "$MANIFEST"
+          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />' "$MANIFEST"
+          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' "$MANIFEST"
           sed -i 's/android:name="\.MainActivity"/android:name=".MainActivity"\n            android:showWhenLocked="true"\n            android:turnScreenOn="true"\n            android:keepScreenOn="true"/' "$MANIFEST"
           cat "$MANIFEST"
 

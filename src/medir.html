@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medir distancia al semáforo</title>
+<style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    html, body { height: 100%; }
+    body { background: #121212; color: #fff; margin: 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); text-align: center; }
+    body.light { background: #f2f2f2; color: #111; }
+    body.light .card { background: #ffffff; border-color: #ddd; }
+    body.light .hint, body.light .lbl { color: #555; }
+    button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+    body.light button:focus-visible { outline-color: #111; }
+
+    .wrap { max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .top-row { display: flex; align-items: center; gap: 8px; text-align: left; }
+    .btn-atras {
+        flex: 0 0 auto; width: 48px; height: 48px; padding: 0; border-radius: 50%;
+        font-size: 1.1em; background: #2a2a2a; color: #fff; border: 1px solid #444; cursor: pointer;
+    }
+    h1 { font-size: 1.2em; margin: 0; }
+    .card {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+        -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+        border-radius: 14px; padding: 16px; text-align: left;
+    }
+    .lbl { font-size: 0.8em; font-weight: 700; color: #aaa; margin-bottom: 8px; display: block; }
+    .hint { font-size: 0.82em; color: #888; line-height: 1.5; margin: 8px 0 0; }
+    button { border: none; font-weight: bold; cursor: pointer; }
+    .btn-big {
+        width: 100%; min-height: 56px; padding: 14px; font-size: 1.05em; border-radius: 14px;
+        background: #00e676; color: #000; margin-top: 8px;
+        box-shadow: 0 4px 18px rgba(0,230,118,0.35);
+    }
+    .btn-big:disabled { opacity: 0.45; box-shadow: none; }
+    .btn-ghost {
+        width: 100%; min-height: 48px; padding: 12px; font-size: 0.95em; border-radius: 14px;
+        background: #2a2a2a; color: #fff; border: 1px solid #444; margin-top: 8px;
+    }
+    .stepper { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .stepper-btn {
+        width: 64px; height: 64px; border-radius: 50%; font-size: 1.8em; font-weight: 900;
+        background: #2a2a2a; color: #fff; border: 1px solid #444;
+    }
+    .vel-val { font-size: 2.2em; font-weight: 900; }
+    .vel-val small { font-size: 0.4em; font-weight: 700; color: #aaa; }
+    .punto { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 0.92em; }
+    .punto-n {
+        flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%;
+        background: #444; color: #fff; font-weight: 900;
+        display: flex; align-items: center; justify-content: center; font-size: 0.9em;
+    }
+    .punto.ok .punto-n { background: #00e676; color: #000; box-shadow: 0 0 12px rgba(0,230,118,0.55); }
+    .punto .punto-txt small { display: block; color: #888; font-size: 0.85em; }
+    .resultado {
+        text-align: center; padding: 16px; border-radius: 14px; margin-top: 8px;
+        background: rgba(0,230,118,0.10); border: 1px solid rgba(0,230,118,0.5);
+        font-size: 1.15em; font-weight: 800;
+    }
+    .resultado small { display: block; font-weight: 400; color: #aaa; font-size: 0.75em; margin-top: 4px; }
+    .status { padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.9em; background: #2a2a2a; color: #aaa; }
+    .status-error { background: rgba(211,47,47,0.15); color: #ff8a80; }
+    .status-ok { background: rgba(0,230,118,0.12); color: #00e676; }
+    .manual-row { display: flex; gap: 8px; margin-top: 8px; }
+    input[type="number"] {
+        flex: 1; min-height: 48px; padding: 10px 12px; font-size: 1em; border-radius: 12px;
+        border: 1px solid #444; background: #1a1a1a; color: #fff; min-width: 0;
+    }
+    body.light input[type="number"] { background: #fff; color: #111; border-color: #ccc; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+    <div class="top-row">
+        <button class="btn-atras" onclick="window.location.href='index.html'" aria-label="Volver al inicio">‹</button>
+        <h1>📍 Medir distancia al semáforo</h1>
+    </div>
+
+    <div class="card">
+        <span class="lbl">Tu velocidad (km/h)</span>
+        <div class="stepper">
+            <button class="stepper-btn" onclick="cambiarVel(-1)" aria-label="Bajar velocidad">−</button>
+            <div class="vel-val"><span id="velVal">55</span> <small>km/h</small></div>
+            <button class="stepper-btn" onclick="cambiarVel(1)" aria-label="Subir velocidad">+</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <span class="lbl">Marca los dos puntos con el GPS</span>
+        <div class="punto" id="puntoA">
+            <span class="punto-n">1</span>
+            <span class="punto-txt">Punto de partida<small id="txtA">Sin marcar</small></span>
+        </div>
+        <div class="punto" id="puntoB">
+            <span class="punto-n">2</span>
+            <span class="punto-txt">Semáforo<small id="txtB">Sin marcar</small></span>
+        </div>
+        <button id="btnMarcar" class="btn-big" onclick="marcarPunto()">Marcar partida</button>
+        <p class="hint">Párate en tu punto de partida, marca, camina o maneja hasta el semáforo y marca de nuevo.</p>
+    </div>
+
+    <div id="statusBox" class="status">Activa el GPS del teléfono para empezar.</div>
+
+    <div id="resultadoBox" class="resultado" style="display:none;">
+        <span id="resultadoTxt">--</span>
+        <small id="resultadoSub"></small>
+        <button class="btn-big" onclick="usarTiempo()">Usar este tiempo</button>
+    </div>
+
+    <div class="card">
+        <span class="lbl">¿Sin GPS? Ingresa los metros a ojo</span>
+        <div class="manual-row">
+            <input id="metrosManual" type="number" min="1" max="5000" inputmode="numeric" placeholder="Metros" aria-label="Metros estimados">
+            <button class="btn-ghost" style="width:auto;margin-top:0;padding:12px 18px;" onclick="calcularManual()">Calcular</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (localStorage.getItem('temaOscuro') === 'false') document.body.classList.add('light');
+
+    let velocidad = parseInt(localStorage.getItem('velocidadMedicion') || '55', 10);
+    if (!(velocidad >= 45 && velocidad <= 70)) velocidad = 55;
+
+    let puntoA = null;
+    let puntoB = null;
+    let segundosCalc = null;
+    let metrosCalc = null;
+
+    const statusBox = document.getElementById('statusBox');
+
+    function setStatus(txt, cls) {
+        statusBox.textContent = txt;
+        statusBox.className = 'status' + (cls ? ' ' + cls : '');
+    }
+
+    function pintarVel() {
+        document.getElementById('velVal').textContent = velocidad;
+    }
+
+    function cambiarVel(d) {
+        velocidad = Math.min(70, Math.max(45, velocidad + d));
+        localStorage.setItem('velocidadMedicion', String(velocidad));
+        pintarVel();
+        // Si ya hay puntos, recalcula con la nueva velocidad.
+        if (puntoA && puntoB) mostrarResultado();
+    }
+
+    function leerPosicion() {
+        return new Promise((resolve, reject) => {
+            if (!('geolocation' in navigator)) {
+                reject(new Error('Este dispositivo no tiene GPS disponible.'));
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(resolve, (err) => {
+                if (err.code === 1) reject(new Error('Permiso de ubicación denegado. Actívalo y reintenta.'));
+                else if (err.code === 3) reject(new Error('Se agotó el tiempo buscando GPS. Prueba al aire libre.'));
+                else reject(new Error('No se pudo obtener la ubicación.'));
+            }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+        });
+    }
+
+    // Promedia 3 lecturas para bajar el error típico del GPS (±5-10 m).
+    async function leerPosicionPromediada() {
+        const lats = [], lons = [], accs = [];
+        for (let i = 0; i < 3; i++) {
+            setStatus(`Midiendo punto… lectura ${i + 1} de 3 (quédate quieta)`);
+            const pos = await leerPosicion();
+            lats.push(pos.coords.latitude);
+            lons.push(pos.coords.longitude);
+            accs.push(pos.coords.accuracy || 999);
+        }
+        const acc = Math.min(...accs);
+        return {
+            lat: lats.reduce((a, b) => a + b, 0) / lats.length,
+            lon: lons.reduce((a, b) => a + b, 0) / lons.length,
+            acc
+        };
+    }
+
+    // Distancia en metros (línea recta, fórmula haversine).
+    function haversine(a, b) {
+        const R = 6371000;
+        const rad = (d) => d * Math.PI / 180;
+        const dLat = rad(b.lat - a.lat);
+        const dLon = rad(b.lon - a.lon);
+        const s = Math.sin(dLat / 2) ** 2 +
+            Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(s));
+    }
+
+    function fmtHora(s) {
+        return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`;
+    }
+
+    async function marcarPunto() {
+        const btn = document.getElementById('btnMarcar');
+        btn.disabled = true;
+        try {
+            const p = await leerPosicionPromediada();
+            if (p.acc > 25) {
+                setStatus(`Precisión baja (±${Math.round(p.acc)} m). Acércate al aire libre y vuelve a marcar.`, 'status-error');
+                return;
+            }
+            if (!puntoA) {
+                puntoA = p;
+                document.getElementById('puntoA').classList.add('ok');
+                document.getElementById('txtA').textContent = `Marcado (±${Math.round(p.acc)} m)`;
+                btn.textContent = 'Marcar semáforo';
+                setStatus('Partida marcada. Ve hasta el semáforo y marca de nuevo.', 'status-ok');
+            } else {
+                puntoB = p;
+                document.getElementById('puntoB').classList.add('ok');
+                document.getElementById('txtB').textContent = `Marcado (±${Math.round(p.acc)} m)`;
+                btn.textContent = 'Volver a medir';
+                mostrarResultado();
+            }
+        } catch (e) {
+            setStatus(e.message, 'status-error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function mostrarResultado() {
+        const metros = haversine(puntoA, puntoB);
+        if (metros < 5) {
+            setStatus('Los dos puntos están en el mismo lugar (<5 m). Aléjate y repite.', 'status-error');
+            return;
+        }
+        if (metros > 5000) {
+            setStatus('Distancia mayor a 5 km: revisa las marcas (quizás el GPS falló).', 'status-error');
+            return;
+        }
+        metrosCalc = Math.round(metros);
+        segundosCalc = Math.max(1, Math.round(metros / (velocidad / 3.6)));
+        document.getElementById('resultadoTxt').textContent =
+            `≈ ${metrosCalc} m a ${velocidad} km/h → ${fmtHora(segundosCalc)}`;
+        document.getElementById('resultadoSub').textContent =
+            'Este tiempo se guardará como "Tiempo hasta el semáforo".';
+        document.getElementById('resultadoBox').style.display = 'block';
+        setStatus('Medición lista.', 'status-ok');
+    }
+
+    function calcularManual() {
+        const m = parseFloat(document.getElementById('metrosManual').value);
+        if (!(m > 0) || m > 5000) {
+            setStatus('Ingresa metros válidos (1 a 5000).', 'status-error');
+            return;
+        }
+        metrosCalc = Math.round(m);
+        segundosCalc = Math.max(1, Math.round(m / (velocidad / 3.6)));
+        document.getElementById('resultadoTxt').textContent =
+            `≈ ${metrosCalc} m a ${velocidad} km/h → ${fmtHora(segundosCalc)}`;
+        document.getElementById('resultadoSub').textContent =
+            'Este tiempo se guardará como "Tiempo hasta el semáforo".';
+        document.getElementById('resultadoBox').style.display = 'block';
+        setStatus('Cálculo manual listo.', 'status-ok');
+    }
+
+    function usarTiempo() {
+        if (!segundosCalc) return;
+        const prev = JSON.parse(localStorage.getItem('parametrosApp') || '{}');
+        prev.tBajada = String(segundosCalc);
+        localStorage.setItem('parametrosApp', JSON.stringify(prev));
+        window.location.href = 'index.html';
+    }
+
+    // Botón "Volver a medir": tercer toque reinicia los puntos.
+    document.getElementById('btnMarcar').addEventListener('click', () => {
+        if (puntoA && puntoB && segundosCalc) {
+            puntoA = puntoB = segundosCalc = metrosCalc = null;
+            document.getElementById('puntoA').classList.remove('ok');
+            document.getElementById('puntoB').classList.remove('ok');
+            document.getElementById('txtA').textContent = 'Sin marcar';
+            document.getElementById('txtB').textContent = 'Sin marcar';
+            document.getElementById('resultadoBox').style.display = 'none';
+            document.getElementById('btnMarcar').textContent = 'Marcar partida';
+            setStatus('Medición reiniciada. Marca la partida.');
+        }
+    }, true);
+
+    pintarVel();
+</script>
+</body>
+</html>
