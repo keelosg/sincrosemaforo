@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Medir distancia al semáforo</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
     html, body { height: 100%; }
@@ -63,6 +65,10 @@
     .status { padding: 12px; border-radius: 12px; font-weight: 700; font-size: 0.9em; background: #2a2a2a; color: #aaa; }
     .status-error { background: rgba(211,47,47,0.15); color: #ff8a80; }
     .status-ok { background: rgba(0,230,118,0.12); color: #00e676; }
+    #mapa { height: 320px; border-radius: 12px; margin-top: 8px; z-index: 0; }
+    .mapa-leyenda { display: flex; gap: 12px; margin-top: 8px; font-size: 0.82em; color: #aaa; }
+    .mapa-leyenda b { font-weight: 800; }
+    .pin-a { color: #00e676; } .pin-b { color: #ff8a80; }
     .manual-row { display: flex; gap: 8px; margin-top: 8px; }
     input[type="number"] {
         flex: 1; min-height: 48px; padding: 10px 12px; font-size: 1em; border-radius: 12px;
@@ -102,7 +108,19 @@
         <p class="hint">Párate en tu punto de partida, marca, camina o maneja hasta el semáforo y marca de nuevo.</p>
     </div>
 
-    <div id="statusBox" class="status">Activa el GPS del teléfono para empezar.</div>
+    <div class="card">
+        <span class="lbl">O marca los puntos en el mapa (sigue las calles)</span>
+        <div id="mapa"></div>
+        <div class="mapa-leyenda">
+            <span><b class="pin-a">●</b> Partida</span>
+            <span><b class="pin-b">●</b> Semáforo</span>
+            <span style="margin-left:auto;" id="mapaEstado">Toca el mapa 2 veces</span>
+        </div>
+        <button class="btn-ghost" onclick="limpiarMapa()">Limpiar puntos</button>
+        <p class="hint">Los pines se pueden arrastrar para ajustar. Requiere internet para el mapa y la ruta.</p>
+    </div>
+
+    <div id="statusBox" class="status">Marca con GPS, en el mapa o a mano.</div>
 
     <div id="resultadoBox" class="resultado" style="display:none;">
         <span id="resultadoTxt">--</span>
@@ -147,6 +165,7 @@
         pintarVel();
         // Si ya hay puntos, recalcula con la nueva velocidad.
         if (puntoA && puntoB) mostrarResultado();
+        if (mapA && mapB && mapMetros) mostrarResultadoMapa(mapMetros);
     }
 
     function leerPosicion() {
@@ -269,6 +288,130 @@
         window.location.href = 'index.html';
     }
 
+    // ===== Mapa con pines + ruteo por calles (OSRM) =====
+    let mapa = null, pinA = null, pinB = null, lineaRuta = null;
+    let mapA = null, mapB = null, mapMetros = null, modoMapa = null, timerRuteo = null;
+    let lastOrigen = null;
+
+    function iconoPin(color) {
+        return L.divIcon({
+            className: '',
+            html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.6);"></div>`,
+            iconSize: [26, 26], iconAnchor: [13, 13]
+        });
+    }
+
+    function initMapa() {
+        if (typeof L === 'undefined') {
+            document.getElementById('mapaEstado').textContent = 'Sin internet: usa GPS o manual';
+            return;
+        }
+        mapa = L.map('mapa').setView([-41.4693, -72.9369], 14); // Puerto Montt
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19, attribution: '© OpenStreetMap'
+        }).addTo(mapa);
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => mapa.setView([pos.coords.latitude, pos.coords.longitude], 15),
+                () => {}, { timeout: 8000, maximumAge: 600000 });
+        }
+        mapa.on('click', (e) => ponerPin(e.latlng));
+        setTimeout(() => mapa.invalidateSize(), 300);
+    }
+
+    function actualizarEstadoMapa() {
+        const el = document.getElementById('mapaEstado');
+        if (!mapA) el.textContent = 'Toca tu partida';
+        else if (!mapB) el.textContent = 'Ahora toca el semáforo';
+        else el.textContent = 'Arrastra para ajustar';
+    }
+
+    function ponerPin(latlng) {
+        const p = { lat: latlng.lat, lon: latlng.lng };
+        if (!mapA) {
+            mapA = p;
+            if (pinA) pinA.setLatLng(latlng);
+            else pinA = L.marker(latlng, { draggable: true, icon: iconoPin('#00e676') }).addTo(mapa).on('dragend', programarRuteo);
+        } else if (!mapB) {
+            mapB = p;
+            if (pinB) pinB.setLatLng(latlng);
+            else pinB = L.marker(latlng, { draggable: true, icon: iconoPin('#d32f2f') }).addTo(mapa).on('dragend', programarRuteo);
+        } else {
+            // Tercer toque mueve el semáforo.
+            mapB = p;
+            pinB.setLatLng(latlng);
+        }
+        actualizarEstadoMapa();
+        programarRuteo();
+    }
+
+    function programarRuteo() {
+        clearTimeout(timerRuteo);
+        timerRuteo = setTimeout(rutear, 500);
+    }
+
+    async function rutear() {
+        if (!mapA || !mapB || !mapa) return;
+        if (pinA) { const c = pinA.getLatLng(); mapA = { lat: c.lat, lon: c.lng }; }
+        if (pinB) { const c = pinB.getLatLng(); mapB = { lat: c.lat, lon: c.lng }; }
+        document.getElementById('mapaEstado').textContent = 'Calculando ruta…';
+        if (lineaRuta) { mapa.removeLayer(lineaRuta); lineaRuta = null; }
+        try {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 10000);
+            const url = `https://router.project-osrm.org/route/v1/driving/${mapA.lon},${mapA.lat};${mapB.lon},${mapB.lat}?overview=full&geometries=geojson`;
+            const res = await fetch(url, { signal: ctrl.signal });
+            clearTimeout(t);
+            const data = await res.json();
+            const ruta = data.routes && data.routes[0];
+            if (!ruta) throw new Error('sin ruta');
+            const pts = ruta.geometry.coordinates.map(c => [c[1], c[0]]);
+            lineaRuta = L.polyline(pts, { color: '#00e676', weight: 5 }).addTo(mapa);
+            mapa.fitBounds(lineaRuta.getBounds(), { padding: [30, 30] });
+            modoMapa = 'calles';
+            mostrarResultadoMapa(ruta.distance);
+        } catch (e) {
+            // Fallback: línea recta con los mismos pines.
+            modoMapa = 'recta';
+            mostrarResultadoMapa(haversine(mapA, mapB));
+        }
+    }
+
+    function mostrarResultadoMapa(metros) {
+        if (metros < 5) {
+            setStatus('Los pines están en el mismo lugar (<5 m). Sepáralos.', 'status-error');
+            return;
+        }
+        if (metros > 20000) {
+            setStatus('Ruta mayor a 20 km: revisa los pines.', 'status-error');
+            return;
+        }
+        mapMetros = Math.round(metros);
+        metrosCalc = mapMetros;
+        segundosCalc = Math.max(1, Math.round(metros / (velocidad / 3.6)));
+        lastOrigen = 'mapa';
+        const via = modoMapa === 'calles' ? 'por calles' : 'en línea recta (sin ruta)';
+        document.getElementById('resultadoTxt').textContent =
+            `≈ ${mapMetros} m ${via} a ${velocidad} km/h → ${fmtHora(segundosCalc)}`;
+        document.getElementById('resultadoSub').textContent =
+            'Este tiempo se guardará como "Tiempo hasta el semáforo".';
+        document.getElementById('resultadoBox').style.display = 'block';
+        document.getElementById('mapaEstado').textContent = `${mapMetros} m ${modoMapa === 'calles' ? 'por calles' : '(recta)'}`;
+        setStatus('Medición del mapa lista.', 'status-ok');
+    }
+
+    function limpiarMapa() {
+        if (pinA) { mapa.removeLayer(pinA); pinA = null; }
+        if (pinB) { mapa.removeLayer(pinB); pinB = null; }
+        if (lineaRuta) { mapa.removeLayer(lineaRuta); lineaRuta = null; }
+        mapA = mapB = mapMetros = modoMapa = null;
+        document.getElementById('mapaEstado').textContent = 'Toca el mapa 2 veces';
+        if (lastOrigen === 'mapa') {
+            segundosCalc = metrosCalc = null;
+            document.getElementById('resultadoBox').style.display = 'none';
+        }
+    }
+
     // Botón "Volver a medir": tercer toque reinicia los puntos.
     document.getElementById('btnMarcar').addEventListener('click', () => {
         if (puntoA && puntoB && segundosCalc) {
@@ -283,6 +426,7 @@
         }
     }, true);
 
+    initMapa();
     pintarVel();
 </script>
 </body>
