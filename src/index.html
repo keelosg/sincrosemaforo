@@ -65,6 +65,8 @@
         .hint { color: var(--faint); font-size: 0.85em; max-width: 360px; margin: 18px auto 6px; line-height: 1.5; }
         .home-secundarios { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
         .home-secundarios .btn-ajustes { margin-top: 0; }
+        .build-tag { font-size: 0.72em; color: var(--faint); margin-top: 14px; }
+        .build-tag-detalle { text-align: center; margin-top: 10px; }
         .btn-ajustes { background: transparent; color: var(--dim); font-size: 0.95em; padding: 12px; margin-top: 20px; min-height: 48px; }
         .card {
             background: rgba(255,255,255,0.06);
@@ -199,6 +201,7 @@
             <button class="btn-ajustes" onclick="toggleAjustes()" aria-expanded="false" id="btnAjustesToggle">⚙ Ajustes</button>
             <button class="btn-ajustes" onclick="window.location.href='medir.html'">📍 Medir distancia</button>
         </div>
+        <div class="build-tag" id="buildTag">build local</div>
         <div id="ajustesCard" class="card hidden">
             <div class="toggle-row">
                 <button id="btnSonido" class="toggle-btn" onclick="toggleSonido()">🔊 Sonido: activado</button>
@@ -206,6 +209,7 @@
                 <button id="btnTema" class="toggle-btn" onclick="alternarTema()">🌙 Tema: oscuro</button>
                 <button id="btnPantalla" class="toggle-btn" onclick="togglePantalla()">💡 Pantalla encendida: sí</button>
             </div>
+            <div class="build-tag build-tag-detalle" id="buildTagAjustes">build local</div>
         </div>
     </div>
 
@@ -682,6 +686,20 @@
         function abrirCamara() {
             window.location.href = 'automatico.html';
         }
+
+        // ===== Build info (qué APK está instalado) =====
+        fetch('build-info.json')
+            .then(r => (r.ok ? r.json() : null))
+            .then(info => {
+                if (!info) return;
+                const txt = info.build === 'local'
+                    ? `build local · ${info.sha || ''}`.trim()
+                    : `build ${info.build} · ${info.branch}`;
+                document.getElementById('buildTag').textContent = txt;
+                const b2 = document.getElementById('buildTagAjustes');
+                if (b2) b2.textContent = txt;
+            })
+            .catch(() => {});
 
         // ===== Inicio =====
         restaurarParametros();
